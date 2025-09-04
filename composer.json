@@ -1,0 +1,11 @@
+{
+  "name": "familybudget/familybudget",
+  "description": "Nextcloud app for managing family expenses",
+  "type": "project",
+  "require": {},
+  "autoload": {
+    "psr-4": {
+      "OCA\\FamilyBudget\\": "lib/"
+    }
+  }
+}

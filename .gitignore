@@ -1,0 +1,24 @@
+# Node
+node_modules/
+js/*.map
+dist/
+
+# PHP / Composer
+vendor/
+composer.lock
+
+# Nextcloud build artifacts
+js/*.js
+css/*.css
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Docker volumes
+data/
+db/
+nextcloud/
