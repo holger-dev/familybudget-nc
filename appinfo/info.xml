@@ -13,7 +13,12 @@
     <namespace>FamilyBudget</namespace>
     <category>tools</category>
     <website>https://heidkamp.dev</website>
-    <bugs>hhttps://heidkamp.dev</bugs>
+    <repository type="git">https://github.com/holger-dev/familybudget-nc</repository>
+    <bugs>https://github.com/holger-dev/familybudget-nc/issues</bugs>
+    <documentation>
+        <user>https://heidkamp.dev</user>
+        <admin>https://heidkamp.dev</admin>
+    </documentation>
     <dependencies>
         <nextcloud min-version="27" max-version="30"/>
         <php min-version="8.1"/>
@@ -21,7 +26,7 @@
     <navigations>
 		<navigation>
 			<id>familybudget</id>
-			<name>Familybudget</name>
+			<name>FamilyBudget</name>
 			<route>familybudget.page.index</route>
 			<icon>app-light.svg</icon>
 			<order>10</order>
