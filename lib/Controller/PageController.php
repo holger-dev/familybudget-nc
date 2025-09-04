@@ -6,6 +6,7 @@ namespace OCA\FamilyBudget\Controller;
 
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\TemplateResponse;
+use OCP\AppFramework\Http\ContentSecurityPolicy;
 use OCP\IRequest;
 
 class PageController extends Controller {
@@ -22,6 +23,16 @@ class PageController extends Controller {
      */
     public function index(): TemplateResponse
     {
-        return new TemplateResponse('familybudget', 'main', []);
+        $response = new TemplateResponse('familybudget', 'main', []);
+        // Restriktive CSP für die App-Ansicht
+        $csp = new ContentSecurityPolicy();
+        $csp->addAllowedScriptDomain('self');
+        $csp->addAllowedStyleDomain('self');
+        $csp->addAllowedImageDomain('self');
+        $csp->addAllowedImageDomain('data:');
+        $csp->addAllowedConnectDomain('self');
+        $csp->addAllowedFontDomain('self');
+        $response->setContentSecurityPolicy($csp);
+        return $response;
     }
 }

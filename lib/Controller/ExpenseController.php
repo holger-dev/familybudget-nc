@@ -82,19 +82,26 @@ class ExpenseController extends Controller
         $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
         $amountCents = (int)round($amount * 100);
 
-        $qb = $this->db->getQueryBuilder();
-        $qb->insert('fc_expenses')
-            ->values([
-                'book_id' => $qb->createNamedParameter($id),
-                'user_uid' => $qb->createNamedParameter($uid),
-                'amount_cents' => $qb->createNamedParameter($amountCents),
-                'currency' => $qb->createNamedParameter($currency),
-                'description' => $qb->createNamedParameter($desc),
-                'occurred_at' => $qb->createNamedParameter($occurredAt),
-                'created_at' => $qb->createNamedParameter($now),
-            ])->executeStatement();
-        $newId = (int)$qb->getLastInsertId();
-        return new JSONResponse(['id' => $newId], 201);
+        try {
+            $this->db->beginTransaction();
+            $qb = $this->db->getQueryBuilder();
+            $qb->insert('fc_expenses')
+                ->values([
+                    'book_id' => $qb->createNamedParameter($id),
+                    'user_uid' => $qb->createNamedParameter($uid),
+                    'amount_cents' => $qb->createNamedParameter($amountCents),
+                    'currency' => $qb->createNamedParameter($currency),
+                    'description' => $qb->createNamedParameter($desc),
+                    'occurred_at' => $qb->createNamedParameter($occurredAt),
+                    'created_at' => $qb->createNamedParameter($now),
+                ])->executeStatement();
+            $newId = (int)$qb->getLastInsertId();
+            $this->db->commit();
+            return new JSONResponse(['id' => $newId], 201);
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            return new JSONResponse(['message' => 'Create failed'], 500);
+        }
     }
 
     private function isMember(int $bookId, string $uid): bool
@@ -122,13 +129,20 @@ class ExpenseController extends Controller
         if (!$this->isMember($id, $uid)) {
             return new JSONResponse(['message' => 'Forbidden'], 403);
         }
-        $qb = $this->db->getQueryBuilder();
-        $qb->delete('fc_expenses')->where($qb->expr()->andX(
-            $qb->expr()->eq('id', $qb->createNamedParameter($eid)),
-            $qb->expr()->eq('book_id', $qb->createNamedParameter($id))
-        ));
-        $qb->executeStatement();
-        return new JSONResponse(['ok' => true]);
+        try {
+            $this->db->beginTransaction();
+            $qb = $this->db->getQueryBuilder();
+            $qb->delete('fc_expenses')->where($qb->expr()->andX(
+                $qb->expr()->eq('id', $qb->createNamedParameter($eid)),
+                $qb->expr()->eq('book_id', $qb->createNamedParameter($id))
+            ));
+            $qb->executeStatement();
+            $this->db->commit();
+            return new JSONResponse(['ok' => true]);
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            return new JSONResponse(['message' => 'Delete failed'], 500);
+        }
     }
 
     /**
@@ -150,19 +164,26 @@ class ExpenseController extends Controller
             $json = json_decode($raw, true);
             if (is_array($json)) { $input = $json; }
         }
-        $qb = $this->db->getQueryBuilder();
-        $qb->update('fc_expenses');
-        $has = false;
-        if (isset($input['amount'])) { $qb->set('amount_cents', $qb->createNamedParameter((int)round(((float)$input['amount']) * 100))); $has = true; }
-        if (array_key_exists('description', $input)) { $desc = $input['description'] !== null ? (string)$input['description'] : null; $qb->set('description', $qb->createNamedParameter($desc)); $has = true; }
-        if (isset($input['date'])) { $occ = ((string)$input['date']) . ' 00:00:00'; $qb->set('occurred_at', $qb->createNamedParameter($occ)); $has = true; }
-        if (isset($input['currency'])) { $qb->set('currency', $qb->createNamedParameter((string)$input['currency'])); $has = true; }
-        if (!$has) { return new JSONResponse(['message' => 'Nothing to update'], 400); }
-        $qb->where($qb->expr()->andX(
-            $qb->expr()->eq('id', $qb->createNamedParameter($eid)),
-            $qb->expr()->eq('book_id', $qb->createNamedParameter($id))
-        ));
-        $qb->executeStatement();
-        return new JSONResponse(['ok' => true]);
+        try {
+            $this->db->beginTransaction();
+            $qb = $this->db->getQueryBuilder();
+            $qb->update('fc_expenses');
+            $has = false;
+            if (isset($input['amount'])) { $qb->set('amount_cents', $qb->createNamedParameter((int)round(((float)$input['amount']) * 100))); $has = true; }
+            if (array_key_exists('description', $input)) { $desc = $input['description'] !== null ? (string)$input['description'] : null; $qb->set('description', $qb->createNamedParameter($desc)); $has = true; }
+            if (isset($input['date'])) { $occ = ((string)$input['date']) . ' 00:00:00'; $qb->set('occurred_at', $qb->createNamedParameter($occ)); $has = true; }
+            if (isset($input['currency'])) { $qb->set('currency', $qb->createNamedParameter((string)$input['currency'])); $has = true; }
+            if (!$has) { $this->db->rollBack(); return new JSONResponse(['message' => 'Nothing to update'], 400); }
+            $qb->where($qb->expr()->andX(
+                $qb->expr()->eq('id', $qb->createNamedParameter($eid)),
+                $qb->expr()->eq('book_id', $qb->createNamedParameter($id))
+            ));
+            $qb->executeStatement();
+            $this->db->commit();
+            return new JSONResponse(['ok' => true]);
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            return new JSONResponse(['message' => 'Update failed'], 500);
+        }
     }
 }

@@ -85,40 +85,47 @@ class BookController extends Controller
             return new JSONResponse(['message' => 'Name required'], 400);
         }
         $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
+        try {
+            $this->db->beginTransaction();
 
-        // create book
-        $qb = $this->db->getQueryBuilder();
-        $qb->insert('fc_books')
-            ->values([
-                'owner_uid' => $qb->createNamedParameter($uid),
-                'name' => $qb->createNamedParameter($name),
-                'created_at' => $qb->createNamedParameter($now),
-            ])->executeStatement();
+            // create book
+            $qb = $this->db->getQueryBuilder();
+            $qb->insert('fc_books')
+                ->values([
+                    'owner_uid' => $qb->createNamedParameter($uid),
+                    'name' => $qb->createNamedParameter($name),
+                    'created_at' => $qb->createNamedParameter($now),
+                ])->executeStatement();
 
-        // fetch created id (avoid driver-specific lastInsertId)
-        $qbId = $this->db->getQueryBuilder();
-        $qbId->select('id')
-            ->from('fc_books')
-            ->where($qbId->expr()->andX(
-                $qbId->expr()->eq('owner_uid', $qbId->createNamedParameter($uid)),
-                $qbId->expr()->eq('name', $qbId->createNamedParameter($name)),
-                $qbId->expr()->eq('created_at', $qbId->createNamedParameter($now))
-            ))
-            ->orderBy('id', 'DESC')
-            ->setMaxResults(1);
-        $bookId = (int)($qbId->execute()->fetchColumn() ?: 0);
+            // fetch created id (avoid driver-specific lastInsertId)
+            $qbId = $this->db->getQueryBuilder();
+            $qbId->select('id')
+                ->from('fc_books')
+                ->where($qbId->expr()->andX(
+                    $qbId->expr()->eq('owner_uid', $qbId->createNamedParameter($uid)),
+                    $qbId->expr()->eq('name', $qbId->createNamedParameter($name)),
+                    $qbId->expr()->eq('created_at', $qbId->createNamedParameter($now))
+                ))
+                ->orderBy('id', 'DESC')
+                ->setMaxResults(1);
+            $bookId = (int)($qbId->execute()->fetchColumn() ?: 0);
 
-        // add owner as member (role owner)
-        $qb2 = $this->db->getQueryBuilder();
-        $qb2->insert('fc_book_members')
-            ->values([
-                'book_id' => $qb2->createNamedParameter($bookId),
-                'user_uid' => $qb2->createNamedParameter($uid),
-                'role' => $qb2->createNamedParameter('owner'),
-                'created_at' => $qb2->createNamedParameter($now),
-            ])->executeStatement();
+            // add owner as member (role owner)
+            $qb2 = $this->db->getQueryBuilder();
+            $qb2->insert('fc_book_members')
+                ->values([
+                    'book_id' => $qb2->createNamedParameter($bookId),
+                    'user_uid' => $qb2->createNamedParameter($uid),
+                    'role' => $qb2->createNamedParameter('owner'),
+                    'created_at' => $qb2->createNamedParameter($now),
+                ])->executeStatement();
 
-        return new JSONResponse(['id' => $bookId, 'name' => $name, 'owner_uid' => $uid, 'role' => 'owner'], 201);
+            $this->db->commit();
+            return new JSONResponse(['id' => $bookId, 'name' => $name, 'owner_uid' => $uid, 'role' => 'owner'], 201);
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            return new JSONResponse(['message' => 'Create failed'], 500);
+        }
     }
 
     /**
@@ -295,17 +302,24 @@ class BookController extends Controller
         if ($role !== 'owner') {
             return new JSONResponse(['message' => 'Forbidden'], 403);
         }
-        // delete expenses, members, book
-        $qb = $this->db->getQueryBuilder();
-        $qb->delete('fc_expenses')->where($qb->expr()->eq('book_id', $qb->createNamedParameter($id)))->executeStatement();
-        $qb2 = $this->db->getQueryBuilder();
-        $qb2->delete('fc_book_members')->where($qb2->expr()->eq('book_id', $qb2->createNamedParameter($id)))->executeStatement();
-        $qb3 = $this->db->getQueryBuilder();
-        $qb3->delete('fc_books')->where($qb3->expr()->andX(
-            $qb3->expr()->eq('id', $qb3->createNamedParameter($id)),
-            $qb3->expr()->eq('owner_uid', $qb3->createNamedParameter($uid))
-        ))->executeStatement();
-        return new JSONResponse(['ok' => true]);
+        try {
+            $this->db->beginTransaction();
+            // delete expenses, members, book
+            $qb = $this->db->getQueryBuilder();
+            $qb->delete('fc_expenses')->where($qb->expr()->eq('book_id', $qb->createNamedParameter($id)))->executeStatement();
+            $qb2 = $this->db->getQueryBuilder();
+            $qb2->delete('fc_book_members')->where($qb2->expr()->eq('book_id', $qb2->createNamedParameter($id)))->executeStatement();
+            $qb3 = $this->db->getQueryBuilder();
+            $qb3->delete('fc_books')->where($qb3->expr()->andX(
+                $qb3->expr()->eq('id', $qb3->createNamedParameter($id)),
+                $qb3->expr()->eq('owner_uid', $qb3->createNamedParameter($uid))
+            ))->executeStatement();
+            $this->db->commit();
+            return new JSONResponse(['ok' => true]);
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            return new JSONResponse(['message' => 'Delete failed'], 500);
+        }
     }
 
     /**
