@@ -12,6 +12,7 @@ FamilyBudget ist eine native Nextcloud‑App, mit der Familien, WGs oder Teams g
 - Filter & Suche: Nach Zeitraum, Person und Text filtern
 - Bearbeiten & Löschen: Ausgaben jederzeit anpassen oder entfernen
 - Übersicht: Monatliche Liste als Grundlage für faire Aufteilung/Splits
+- iOS‑App: Native iOS‑App folgt in Kürze
 
 ## So funktioniert’s
 
@@ -47,6 +48,10 @@ FamilyBudget ist eine reguläre Nextcloud‑App.
 ## API (optional)
 
 FamilyBudget bietet eine einfache REST‑API innerhalb von Nextcloud, z. B. für mobile Apps. Die wichtigsten Endpunkte sind in `docs/API.md` beschrieben. Authentifizierung über Nextcloud‑Session oder App‑Passwort.
+
+## Mobile
+
+- iOS: Eine native iOS‑App ist bereits weit fortgeschritten und erscheint in Kürze. Sie nutzt dieselben Daten über die integrierte FamilyBudget‑API deiner Nextcloud‑Instanz.
 
 ## Support & Feedback
 
