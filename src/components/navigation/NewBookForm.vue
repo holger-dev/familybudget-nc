@@ -15,7 +15,7 @@
 import NcTextField from '@nextcloud/vue/dist/Components/NcTextField.js'
 import NcButton from '@nextcloud/vue/dist/Components/NcButton.js'
 import Plus from 'vue-material-design-icons/Plus.vue'
-import { api } from '../../utils/api.js'
+import { apiFetch } from '../../utils/api.js'
 
 export default {
   name: 'NewBookForm',
@@ -30,11 +30,7 @@ export default {
   methods: {
     async create() {
       const name = this.name.trim(); if (!name) return
-      const res = await fetch(api('/books'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
-      })
+      const res = await apiFetch('/books', { method: 'POST', body: { name } })
       if (res.ok) {
         const b = await res.json()
         this.$emit('book-created', b)

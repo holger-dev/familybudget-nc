@@ -44,7 +44,7 @@ import ExpenseCreateModal from './components/expenses/ExpenseCreateModal.vue'
 import ExpenseList from './components/expenses/ExpenseList.vue'
 import ExpenseFilters from './components/expenses/ExpenseFilters.vue'
 import { showSuccess, showError } from './utils/notify'
-import { api } from './utils/api.js'
+import { api, apiFetch } from './utils/api.js'
 // (no duplicate imports)
 
 export default {
@@ -83,12 +83,12 @@ export default {
     async createBook() { /* legacy, unused here */ },
     async invite() { /* legacy, unused here */ },
     async loadBooks() {
-      const res = await fetch(api('/books'))
+      const res = await apiFetch('/books')
       if (res.ok) { const j = await res.json(); this.store.books = j.books; if (!this.store.currentBookId && this.store.books.length) this.store.currentBookId = this.store.books[0].id }
     },
     async loadExpenses() {
       if (!this.store.currentBookId) return
-      const res = await fetch(api(`/books/${this.store.currentBookId}/expenses`))
+      const res = await apiFetch(`/books/${this.store.currentBookId}/expenses`)
       if (res.ok) { const j = await res.json(); this.store.expenses = j.expenses }
     },
     async saveExpense(payload) {
@@ -96,11 +96,11 @@ export default {
       try {
         if (payload.id) {
           const { id, ...rest } = payload
-          const res = await fetch(api(`/books/${this.store.currentBookId}/expenses/${id}`), { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(rest) })
+          const res = await apiFetch(`/books/${this.store.currentBookId}/expenses/${id}`, { method:'PATCH', body: rest })
           if (!res.ok) throw new Error('update')
           showSuccess('Ausgabe aktualisiert')
         } else {
-          const res = await fetch(api(`/books/${this.store.currentBookId}/expenses`), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+          const res = await apiFetch(`/books/${this.store.currentBookId}/expenses`, { method:'POST', body: payload })
           if (!res.ok) throw new Error('create')
           showSuccess('Ausgabe gespeichert')
         }
@@ -115,7 +115,7 @@ export default {
       if (!this.store.currentBookId || !e?.id) return
       if (!window.confirm('Ausgabe wirklich löschen?')) return
       try {
-        const res = await fetch(api(`/books/${this.store.currentBookId}/expenses/${e.id}`), { method:'DELETE' })
+        const res = await apiFetch(`/books/${this.store.currentBookId}/expenses/${e.id}`, { method:'DELETE' })
         if (!res.ok) throw new Error('delete')
         showSuccess('Ausgabe gelöscht')
         await this.loadExpenses()
@@ -124,7 +124,7 @@ export default {
     sendInvites() {
       if (!this.store.currentBookId || !this.shareUsers.length) return
       const invites = this.shareUsers.map(u => (typeof u === 'string' ? u : (u?.id || u?.uid || u?.value))).filter(Boolean)
-      Promise.all(invites.map(uid => fetch(api(`/books/${this.store.currentBookId}/invite`), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user: uid }) })))
+      Promise.all(invites.map(uid => apiFetch(`/books/${this.store.currentBookId}/invite`, { method:'POST', body: { user: uid } })))
         .then(() => { this.shareUsers = []; this.sidebarOpen = false })
     },
     openDetails(book) {
@@ -143,11 +143,7 @@ export default {
         return
       }
       // Persist to backend, then update local store
-      fetch(api(`/books/${b.id}/rename`), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
-      }).then(async (res) => {
+      apiFetch(`/books/${b.id}/rename`, { method: 'POST', body: { name } }).then(async (res) => {
         if (!res.ok) throw new Error('rename failed')
         b.name = name
         this.sidebarOpen = false
@@ -161,7 +157,7 @@ export default {
       if (!this.store.currentBookId) return
       try {
         const id = this.store.currentBookId
-        const res = await fetch(api(`/books/${id}`), { method:'DELETE' })
+        const res = await apiFetch(`/books/${id}`, { method:'DELETE' })
         if (!res.ok) throw new Error('delete book')
         // remove from store
         this.store.books = this.store.books.filter(b => b.id !== id)

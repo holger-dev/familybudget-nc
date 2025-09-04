@@ -24,7 +24,6 @@ class ExpenseController extends Controller
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      * @param int $id Book id
      */
     public function index(int $id): JSONResponse
@@ -54,7 +53,6 @@ class ExpenseController extends Controller
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      * @param int $id Book id
      */
     public function create(int $id): JSONResponse
@@ -113,7 +111,6 @@ class ExpenseController extends Controller
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     public function delete(int $id, int $eid): JSONResponse
     {
@@ -136,7 +133,6 @@ class ExpenseController extends Controller
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     public function update(int $id, int $eid): JSONResponse
     {

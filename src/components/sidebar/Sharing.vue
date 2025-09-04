@@ -35,7 +35,7 @@
  import NcSelect from '@nextcloud/vue/dist/Components/NcSelect.js'
  import NcButton from '@nextcloud/vue/dist/Components/NcButton.js'
  import DeleteIcon from 'vue-material-design-icons/Delete.vue'
- import { api } from '../../utils/api.js'
+ import { apiFetch } from '../../utils/api.js'
 import { showSuccess, showError } from '../../utils/notify'
 
 export default {
@@ -52,9 +52,7 @@ export default {
       if (!this.bookId) return
       const ids = this.selectedSharee ? [this.selectedSharee.uid] : []
       try {
-        await Promise.all(ids.map(uid => fetch(api(`/books/${this.bookId}/invite`), {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user: uid }),
-        })))
+        await Promise.all(ids.map(uid => apiFetch(`/books/${this.bookId}/invite`, { method: 'POST', body: { user: uid } })))
         this.selectedSharee = null
         await this.loadMembers()
         showSuccess('Einladung gesendet')
@@ -80,7 +78,7 @@ export default {
     async loadMembers() {
       try {
         if (!this.bookId) return
-        const res = await fetch(api(`/books/${this.bookId}/members`))
+        const res = await apiFetch(`/books/${this.bookId}/members`)
         if (res.ok) {
           const j = await res.json(); this.members = j.members || []
         }
@@ -91,7 +89,7 @@ export default {
       if (this.currentUid && m.user_uid === this.currentUid) { showError('Du kannst dich nicht selbst entfernen'); return }
       if (!window.confirm(`Benutzer ${m.display_name || m.user_uid} entfernen?`)) return
       try {
-        const res = await fetch(api(`/books/${this.bookId}/members/${encodeURIComponent(m.user_uid)}`), { method: 'DELETE' })
+        const res = await apiFetch(`/books/${this.bookId}/members/${encodeURIComponent(m.user_uid)}`, { method: 'DELETE' })
         if (!res.ok) throw new Error('remove')
         await this.loadMembers()
         showSuccess('Benutzer entfernt')

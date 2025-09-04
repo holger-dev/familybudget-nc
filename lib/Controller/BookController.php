@@ -24,7 +24,6 @@ class BookController extends Controller
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     public function index(): JSONResponse
     {
@@ -67,7 +66,6 @@ class BookController extends Controller
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     public function create(): JSONResponse
     {
@@ -125,7 +123,6 @@ class BookController extends Controller
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      * @param int $id
      */
     public function rename(int $id): JSONResponse
@@ -176,7 +173,6 @@ class BookController extends Controller
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      * @param int $id
      */
     public function invite(int $id): JSONResponse
@@ -227,7 +223,6 @@ class BookController extends Controller
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      * @param int $id
      */
     public function members(int $id): JSONResponse
@@ -281,7 +276,6 @@ class BookController extends Controller
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     public function delete(int $id): JSONResponse
     {
@@ -317,7 +311,6 @@ class BookController extends Controller
     /**
      * Remove a member from a book (owner only). Owner cannot be removed.
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     public function removeMember(int $id, string $uid): JSONResponse
     {
