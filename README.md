@@ -1,87 +1,58 @@
-# Familybudget Nextcloud App
+# FamilyBudget – Ausgaben gemeinsam im Blick
 
-Eine native Nextcloud-App zur Verwaltung von Familienausgaben mit Multi-User-Support, Kategorien und Einladungsfunktion. Die User können jeder für sich Ausgaben eintragen, die allen eingeladenen Usern ebenfalls sichtbar angezeigt werden. Es gibt eine automatische, monatliche Auswertung inkl. Split, um zu sehen, welcher User wie viel ausgegeben hat und ggf. Geld von anderen Usern erhält oder andersherum. Die App soll sich an die Designregeln von Nextcloud-Vue-Components halten und Schnittstellen haben, damit eine externe, mobile App ebenfalls Daten schreiben und lesen kann.
+FamilyBudget ist eine native Nextcloud‑App, mit der Familien, WGs oder Teams gemeinsame Ausgaben einfach erfassen, teilen und auswerten können. Alles läuft datenschutzfreundlich auf dem eigenen Nextcloud‑Server.
 
-## Implementierung
+![FamilyBudget Screenshot](./store.png)
 
-- Aktives Git-Repo wird genutzt (dieses Repository).
-- Docker-Entwicklungsumgebung für Nextcloud ist enthalten (`docker-compose.yml`).
-- Frontend-Scaffold mit Nextcloud Vue Components vorhanden (`@nextcloud/vue`).
-- Die App ist als Nextcloud-App-Skelett angelegt (PHP + Templating).
+## Highlights
 
-## Projektstruktur (Kurzüberblick)
+- Multi‑User: Ausgaben pro Person erfassen, gemeinsam einsehen
+- Bücher: Mehrere „Haushaltsbücher“ für unterschiedliche Gruppen/Projekte
+- Einladungen: Andere Nextcloud‑Nutzer bequem ins Buch einladen
+- Filter & Suche: Nach Zeitraum, Person und Text filtern
+- Bearbeiten & Löschen: Ausgaben jederzeit anpassen oder entfernen
+- Übersicht: Monatliche Liste als Grundlage für faire Aufteilung/Splits
 
-- `appinfo/` – App-Metadaten, Routen, Asset-Registrierung
-- `lib/` – PHP-Code (Controller etc.)
-- `templates/` – PHP-Templates (Startpunkt rendert `<div id="familybudget-app">`)
-- `src/` – Vue-Quellcode (Vite/Webpack Build; hier Webpack-Config)
-- `js/` – Build-Output (wird von Webpack erzeugt)
-- `css/` – App-Styles
-- `docker-compose.yml` – Nextcloud + MariaDB Dev-Stack
-- `Makefile` – nützliche Kommandos (up/down/logs/occ/build/watch)
+## So funktioniert’s
 
-## Voraussetzungen
+- Buch anlegen: Erstelle ein Buch (z. B. „Haushalt“, „WG“, „Urlaub“)
+- Mitglieder einladen: Lade Nextcloud‑Nutzer in das Buch ein
+- Ausgaben erfassen: Betrag, Datum, Beschreibung – fertig
+- Nachvollziehen: Jede Ausgabe ist einer Person zugeordnet; alle Mitglieder sehen die Einträge
+- Auswerten: Filtere nach Zeiträumen und Personen für einen schnellen Überblick
 
-- Docker + Docker Compose
-- Node.js LTS (z. B. 18+) + npm
+## Installation
 
-## Entwicklung starten
+FamilyBudget ist eine reguläre Nextcloud‑App.
 
-1) Nextcloud-Stack starten
+- Empfohlener Weg: Über den Nextcloud App‑Store installieren und in der Administrationsoberfläche aktivieren.
+- Manuelle Installation (Administratoren):
+  1) App‑Ordner `familybudget` in `custom_apps/` der Nextcloud‑Instanz ablegen
+  2) App aktivieren: `occ app:enable familybudget`
 
-```
-make up
-```
+## Kompatibilität
 
-Danach ist Nextcloud unter `http://localhost:8080` erreichbar. Der Initial-Setup erfolgt automatisch mit:
+- Nextcloud: Versionen 27–30
+- PHP: ab 8.1
 
-- Benutzer: `admin`
-- Passwort: `admin`
+## Berechtigungen & Datenschutz
 
-2) Abhängigkeiten für das Frontend installieren (nur einmal lokal):
+- Authentifizierung: Es gelten die bestehenden Nextcloud‑Konten und Berechtigungen
+- Sichtbarkeit: Daten eines Buchs sind nur für eingeladene Mitglieder sichtbar
+- Speicherung: Daten liegen in der Nextcloud‑Datenbank in eigenen Tabellen
+  - `fc_books` (Bücher)
+  - `fc_book_members` (Mitglieder je Buch)
+  - `fc_expenses` (Ausgaben)
 
-```
-npm install
-```
+## API (optional)
 
-3) Frontend bauen (erzeugt `js/familybudget.js`):
+FamilyBudget bietet eine einfache REST‑API innerhalb von Nextcloud, z. B. für mobile Apps. Die wichtigsten Endpunkte sind in `docs/API.md` beschrieben. Authentifizierung über Nextcloud‑Session oder App‑Passwort.
 
-```
-npm run build
-```
+## Support & Feedback
 
-Für Live-Entwicklung kann stattdessen im Watch-Mode gebaut werden:
+- Probleme oder Ideen? Erstelle ein Issue im Repository.
+- Website: https://heidkamp.dev
 
-```
-npm run watch
-```
+—
 
-4) App in Nextcloud aufrufen
-
-Sobald Nextcloud läuft und das Frontend gebaut ist, kann die App über `http://localhost:8080/apps/familybudget/` geöffnet werden.
-
-## Nützliche Kommandos
-
-- Nextcloud-Logs ansehen: `make logs`
-- In den Container springen: `make exec`
-- OCC im Container ausführen: `make occ cmd="app:list"`
-- Stack stoppen: `make down`
-
-## Design-Richtlinien
-
-Das Frontend folgt den Komponenten aus Nextcloud Vue Components:
-https://nextcloud-vue-components.netlify.app/
-
-In `src/App.vue` ist ein Minimalbeispiel mit `NcAppContent`, `NcEmptyContent` und `NcButton` enthalten.
-
-## Nächste Schritte (Backlog)
-
-- Datenmodell für Ausgaben, Kategorien, Einladungen entwerfen (Datenbank-Migrationen, Entities, Mappers)
-- REST-Controller/API für das mobile App-Frontend
-- State-Management im Frontend (z. B. Pinia) und Axios-Client
-- Auth/Permissions (nur eingeladene User sehen Daten)
-- Monatsauswertung + Split-Logik
-
----
-
-Hinweis: Abhängigkeiten werden lokal via `npm ci` installiert. Der Container mountet die App automatisch nach `/var/www/html/custom_apps/familybudget`.
+Hinweis: Diese README richtet sich an Anwender. Entwickler‑Hinweise (Dev‑Setup, Docker, Build) wurden entfernt, um die Veröffentlichung im App‑Store/Repository nutzerfreundlich zu halten.
