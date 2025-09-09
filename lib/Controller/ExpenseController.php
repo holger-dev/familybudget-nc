@@ -24,6 +24,7 @@ class ExpenseController extends Controller
 
     /**
      * @NoAdminRequired
+     * @NoCSRFRequired
      * @param int $id Book id
      */
     public function index(int $id): JSONResponse

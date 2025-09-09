@@ -1,177 +1,202 @@
-# FamilyBudget API (Nextcloud app)
+# FamilyBudget API (Nextcloud App)
 
-This document describes the HTTP endpoints exposed by the FamilyBudget Nextcloud app, with a focus on creating and managing expenses. All routes are relative to your Nextcloud base URL.
+Diese Dokumentation ist für die Implementierung der Flutter‑App ausgelegt. Sie beschreibt alle relevanten OCS‑Endpunkte inklusive Request/Response‑Schemas und einen kompakten Flutter/Dart‑Beispielservice.
 
-- Base URL (new): `https://<your-nextcloud>/apps/familybudget`
-- Note: If your instance still uses the legacy app id, the base URL is `.../apps/familybudget`.
-- Auth: Nextcloud session or Basic Auth with app password
-  - Example header: `Authorization: Basic <base64(username:app-password)>`
-- Content type: `application/json`
-- All endpoints below require an authenticated user and are marked `@NoAdminRequired`.
+Version: 0.2.0
 
-## Books
+## Überblick
 
-GET `/books`
-- Returns the list of books the user can access.
-- 200 response body:
-```
-{ "books": [ { "id": 1, "name": "Haushalt", "owner_uid": "alice", "role": "owner" }, ... ] }
-```
+- App‑Routen (Web‑UI): `https://<cloud>/apps/familybudget/...` (Session/CSRF‑geschützt; nicht für mobile Clients)
+- OCS‑API (für externe/mobile Clients): `https://<cloud>/ocs/v2.php/apps/familybudget/...`
 
-POST `/books`
-- Create a new book owned by the current user.
-- Request body:
+Authentifizierung und Header (OCS):
+- Basic Auth mit Nextcloud App‑Passwort: `Authorization: Basic <base64(username:app-password)>`
+- Pflicht‑Header: `OCS-APIRequest: true`
+- Content‑Type für Schreibaufrufe: `application/json`
+
+Antwortformat: JSON‑Objekte mit Payload (kein OCS‑XML‑Wrapper erforderlich).
+
+## Datenmodelle
+
+Book
 ```
-{ "name": "Haushalt" }
-```
-- 201 response body:
-```
-{ "id": 3, "name": "Haushalt", "owner_uid": "alice", "role": "owner" }
+{ "id": number, "name": string, "owner_uid": string, "role": "owner"|"member" }
 ```
 
-POST `/books/{id}/rename` (also supports PUT/PATCH `/books/{id}` in some setups)
-- Rename a book (owner only).
-- Request body: `{ "name": "Neuer Name" }`
-- 200 response: `{ "ok": true, "id": 3, "name": "Neuer Name" }`
-
-DELETE `/books/{id}`
-- Delete a book (owner only). Also deletes members and expenses.
-- 200 response: `{ "ok": true }`
-
-POST `/books/{id}/invite`
-- Invite another user to a book (must be a member; typically owner).
-- Request body: `{ "user": "bob" }` (uid)
-- 200 response: `{ "ok": true }`
-
-GET `/books/{id}/members`
-- List members of a book (must be a member).
-- 200 response body:
+Member
 ```
-{ "members": [
-  { "user_uid": "alice", "role": "owner", "created_at": "2024-09-03 12:00:00", "display_name": "Alice Example" },
-  { "user_uid": "bob",   "role": "member", "created_at": "2024-09-04 09:15:00", "display_name": "Bob Example" }
-] }
+{ "user_uid": string, "role": "owner"|"member", "created_at": string|null, "display_name"?: string }
 ```
 
-## Expenses
-
-GET `/books/{id}/expenses`
-- List all expenses for a book (must be a member).
-- 200 response body:
+Expense
 ```
-{ "expenses": [
-  {
-    "id": 12,
-    "book_id": 3,
-    "user_uid": "alice",
-    "amount_cents": 1599,
-    "currency": "EUR",
-    "description": "Wocheneinkauf",
-    "occurred_at": "2025-09-03 00:00:00",
-    "created_at": "2025-09-03 10:22:31"
-  },
-  ...
-] }
+{
+  "id": number,
+  "book_id": number,
+  "user_uid": string,
+  "amount_cents": number,
+  "currency": string,
+  "description": string|null,
+  "occurred_at": "YYYY-MM-DD 00:00:00",
+  "created_at": "YYYY-MM-DD HH:MM:SS"
+}
 ```
 
-POST `/books/{id}/expenses`
-- Create a new expense in a book (must be a member). The payer is the authenticated user.
-- Request body:
-```
-{ "amount": 15.99, "description": "Wocheneinkauf", "date": "2025-09-03", "currency": "EUR" }
-```
-- 201 response body: `{ "id": 42 }`
+Client‑Mapping (Empfehlung):
+- `amount` (Double) ↔ `amount_cents` (int) mit Faktor 100 konvertieren
+- `date` als `YYYY-MM-DD`; Server speichert `occurred_at` mit Zeit `00:00:00`
+- `user` in UI aus `display_name` (fallback `user_uid`)
 
-PATCH `/books/{id}/expenses/{eid}`
-- Update fields of an expense (member of the book).
-- Request body (any subset):
-```
-{ "amount": 19.5, "description": "Bio-Einkauf", "date": "2025-09-04", "currency": "EUR" }
-```
-- 200 response: `{ "ok": true }`
+## Endpunkte (OCS)
 
-DELETE `/books/{id}/expenses/{eid}`
-- Delete an expense (member of the book).
-- 200 response: `{ "ok": true }`
+Base: `https://<cloud>/ocs/v2.php/apps/familybudget`
+Header: `OCS-APIRequest: true`
 
-## Status codes
+Books
+- GET `/books` → `{ "books": Book[] }`
+- POST `/books` Body `{ "name": string }` → `201 { ...Book }`
+- PUT|PATCH `/books/{id}` Body `{ "name": string }` → `{ ok: true, id, name }`
+- POST `/books/{id}/rename` Body `{ "name": string }` → `{ ok: true, id, name }`
+- GET `/books/{id}/members` → `{ "members": Member[] }`
+- POST `/books/{id}/invite` Body `{ "user": "<uid>" }` → `{ ok: true }`
+- DELETE `/books/{id}/members/{uid}` → `{ ok: true }`
+- DELETE `/books/{id}` → `{ ok: true }`
+
+Expenses
+- GET `/books/{id}/expenses` → `{ "expenses": Expense[] }`
+- POST `/books/{id}/expenses` Body `{ amount: number, description?: string, date: "YYYY-MM-DD", currency?: string }` → `201 { id: number }`
+- PATCH `/books/{id}/expenses/{eid}` Body beliebiges Teilset `{ amount?, description?, date?, currency? }` → `{ ok: true }`
+- DELETE `/books/{id}/expenses/{eid}` → `{ ok: true }`
+
+Statuscodes
 - 200 OK, 201 Created
-- 400 Bad Request (missing/invalid fields)
-- 401 Unauthorized (not logged in)
-- 403 Forbidden (no access to the book)
-- 404 Not Found (resource not found)
+- 400 Bad Request (fehlende/ungültige Felder)
+- 401 Unauthorized (Auth/Passwort fehlt/falsch)
+- 403 Forbidden (kein Zugriff auf Buch)
+- 404 Not Found (Ressource existiert nicht)
 
-## iOS request examples
+## Flutter‑Quickstart (Dio)
 
-Swift (URLSession + Basic Auth with app password):
+Beispiel‑Service (vereinfachter Ausschnitt). Erwartet `username` und `appPassword` (Nextcloud App‑Passwort).
 
-```swift
-let base = URL(string: "https://yourcloud.example.com/apps/familybudget")!
-let bookId = 3
-let url = base.appendingPathComponent("books/\(bookId)/expenses")
+```dart
+import 'dart:convert';
+import 'package:dio/dio.dart';
 
-var req = URLRequest(url: url)
-req.httpMethod = "POST"
-req.addValue("application/json", forHTTPHeaderField: "Content-Type")
+class NcApiService {
+  final String baseUrl; // e.g. https://cloud.example.com/ocs/v2.php/apps/familybudget
+  final Dio _dio;
 
-// Basic auth (username:app-password)
-let credentials = "alice:YOUR_APP_PASSWORD"
-let token = Data(credentials.utf8).base64EncodedString()
-req.addValue("Basic \(token)", forHTTPHeaderField: "Authorization")
+  NcApiService({required this.baseUrl, required String username, required String appPassword})
+      : _dio = Dio(BaseOptions(
+          baseUrl: baseUrl,
+          headers: {
+            'OCS-APIRequest': 'true',
+            'Authorization': 'Basic ' + base64Encode(utf8.encode('$username:$appPassword')),
+          },
+        ));
 
-struct CreateExpense: Codable { let amount: Double; let description: String?; let date: String; let currency: String }
-let payload = CreateExpense(amount: 15.99, description: "Wocheneinkauf", date: "2025-09-03", currency: "EUR")
-req.httpBody = try JSONEncoder().encode(payload)
+  // Books
+  Future<List<dynamic>> listBooks() async {
+    final res = await _dio.get('/books');
+    return (res.data['books'] as List?) ?? [];
+  }
 
-URLSession.shared.dataTask(with: req) { data, resp, err in
-    if let err = err { print("Error:", err); return }
-    guard let http = resp as? HTTPURLResponse else { return }
-    print("Status", http.statusCode)
-    if http.statusCode == 201, let data = data {
-        print(String(data: data, encoding: .utf8) ?? "")
-    }
-}.resume()
+  Future<Map<String, dynamic>> createBook(String name) async {
+    final res = await _dio.post('/books', data: {'name': name});
+    return Map<String, dynamic>.from(res.data);
+  }
+
+  Future<void> renameBook(int id, String name) async {
+    await _dio.patch('/books/$id', data: {'name': name});
+  }
+
+  Future<List<dynamic>> listMembers(int id) async {
+    final res = await _dio.get('/books/$id/members');
+    return (res.data['members'] as List?) ?? [];
+  }
+
+  Future<void> inviteMember(int id, String uid) async {
+    await _dio.post('/books/$id/invite', data: {'user': uid});
+  }
+
+  Future<void> removeMember(int id, String uid) async {
+    await _dio.delete('/books/$id/members/$uid');
+  }
+
+  Future<void> deleteBook(int id) async {
+    await _dio.delete('/books/$id');
+  }
+
+  // Expenses
+  Future<List<dynamic>> listExpenses(int bookId) async {
+    final res = await _dio.get('/books/$bookId/expenses');
+    return (res.data['expenses'] as List?) ?? [];
+  }
+
+  Future<int> createExpense({
+    required int bookId,
+    required double amount,
+    required String date, // YYYY-MM-DD
+    String? description,
+    String currency = 'EUR',
+  }) async {
+    final res = await _dio.post('/books/$bookId/expenses', data: {
+      'amount': amount,
+      'date': date,
+      'description': description,
+      'currency': currency,
+    });
+    return (res.data['id'] as num).toInt();
+  }
+
+  Future<void> updateExpense({
+    required int bookId,
+    required int expenseId,
+    double? amount,
+    String? date, // YYYY-MM-DD
+    String? description,
+    String? currency,
+  }) async {
+    final body = <String, dynamic>{};
+    if (amount != null) body['amount'] = amount;
+    if (date != null) body['date'] = date;
+    if (description != null) body['description'] = description;
+    if (currency != null) body['currency'] = currency;
+    await _dio.patch('/books/$bookId/expenses/$expenseId', data: body);
+  }
+
+  Future<void> deleteExpense(int bookId, int expenseId) async {
+    await _dio.delete('/books/$bookId/expenses/$expenseId');
+  }
+}
 ```
 
-Listing expenses:
-```swift
-let listURL = base.appendingPathComponent("books/\(bookId)/expenses")
-var listReq = URLRequest(url: listURL)
-listReq.addValue("Basic \(token)", forHTTPHeaderField: "Authorization")
-URLSession.shared.dataTask(with: listReq) { data, resp, _ in
-    // parse JSON { expenses: [...] }
-}.resume()
+Hinweise zum Mapping:
+- Für UI‑Darstellung können aus `occurred_at` ISO‑Dates abgeleitet werden (`YYYY-MM-DDT00:00:00.000Z`).
+- Monatsfilter clientseitig umsetzen (API filtert noch nicht nach Zeitraum).
+
+## Testen mit curl
+
+```bash
+curl -u USER:APP-PASS -H 'OCS-APIRequest: true' \
+  https://<cloud>/ocs/v2.php/apps/familybudget/books
+
+curl -u USER:APP-PASS -H 'OCS-APIRequest: true' -H 'Content-Type: application/json' \
+  -d '{"name":"Haushalt"}' \
+  https://<cloud>/ocs/v2.php/apps/familybudget/books
 ```
 
-Update an expense:
-```swift
-let eid = 42
-let updURL = base.appendingPathComponent("books/\(bookId)/expenses/\(eid)")
-var updReq = URLRequest(url: updURL)
-updReq.httpMethod = "PATCH"
-updReq.addValue("application/json", forHTTPHeaderField: "Content-Type")
-updReq.addValue("Basic \(token)", forHTTPHeaderField: "Authorization")
-let body = ["amount": 19.50, "description": "Bio-Einkauf"] as [String : Any]
-updReq.httpBody = try! JSONSerialization.data(withJSONObject: body)
-URLSession.shared.dataTask(with: updReq) { _, resp, _ in
-    print((resp as? HTTPURLResponse)?.statusCode as Any)
-}.resume()
+### PHP Smoke Test
+
+Ein vollautomatisierter Durchlauf (Bücher listen → Buch erstellen/umbenennen → Ausgabe erstellen/listen/ändern/löschen → Buch löschen) ist im Repo enthalten:
+
+```bash
+php scripts/ocs_smoke.php https://<cloud>/ocs/v2.php/apps/familybudget USER APP-PASS
 ```
 
-Delete an expense:
-```swift
-let delURL = base.appendingPathComponent("books/\(bookId)/expenses/\(eid)")
-var delReq = URLRequest(url: delURL)
-delReq.httpMethod = "DELETE"
-delReq.addValue("Basic \(token)", forHTTPHeaderField: "Authorization")
-URLSession.shared.dataTask(with: delReq) { _, resp, _ in
-    print((resp as? HTTPURLResponse)?.statusCode as Any)
-}.resume()
-```
+## Migration/Notizen
 
-## Notes
-- Amounts: create/update endpoints accept `amount` as a decimal (Double). The backend stores `amount_cents` as integer.
-- Dates: send `date` in `YYYY-MM-DD`.
-- Payer: the authenticated user is set as `user_uid` on creation.
-- Permissions: only members of the book can list/create/update/delete its expenses.
-- Members: `display_name` is included when available; otherwise, `user_uid` can be used as fallback.
+- Es gibt kein `/api/v1`. Mobile Clients müssen die OCS‑Basis verwenden.
+- App‑Routen bleiben für die Web‑Oberfläche; nur GETs sind dort CSRF‑frei.
+- Für alle Schreiboperationen extern: OCS‑Pfad + `OCS-APIRequest: true`.

@@ -24,6 +24,7 @@ class BookController extends Controller
 
     /**
      * @NoAdminRequired
+     * @NoCSRFRequired
      */
     public function index(): JSONResponse
     {
