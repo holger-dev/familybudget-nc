@@ -43,6 +43,64 @@ class ExpenseController extends Controller
                 ->from('fc_expenses')
                 ->where($qb->expr()->eq('book_id', $qb->createNamedParameter($id)))
                 ->orderBy('occurred_at', 'DESC');
+
+            // Optional filters
+            // 1) Month list: month=YYYY-MM (repeatable) or months=YYYY-MM,YYYY-MM
+            // 2) Range: from=YYYY-MM [& to=YYYY-MM]
+            $monthsFilter = [];
+            $monthParam = $this->request->getParam('month');
+            if (is_array($monthParam)) {
+                $monthsFilter = $monthParam;
+            } elseif (is_string($monthParam) && $monthParam !== '') {
+                $monthsFilter = [$monthParam];
+            }
+            $monthsCsv = $this->request->getParam('months');
+            if (is_string($monthsCsv) && $monthsCsv !== '') {
+                foreach (explode(',', $monthsCsv) as $m) { $monthsFilter[] = trim($m); }
+            }
+            $fromParam = $this->request->getParam('from');
+            $toParam = $this->request->getParam('to');
+
+            $rangeApplied = false;
+            if (is_string($fromParam) && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $fromParam)) {
+                try {
+                    $fromDt = new \DateTimeImmutable($fromParam . '-01 00:00:00');
+                    $qb->andWhere($qb->expr()->gte('occurred_at', $qb->createNamedParameter($fromDt->format('Y-m-d H:i:s'))));
+                    $rangeApplied = true;
+                } catch (\Throwable $e) {}
+            }
+            if (is_string($toParam) && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $toParam)) {
+                try {
+                    $toDt = new \DateTimeImmutable($toParam . '-01 00:00:00');
+                    $toEnd = $toDt->modify('first day of next month');
+                    $qb->andWhere($qb->expr()->lt('occurred_at', $qb->createNamedParameter($toEnd->format('Y-m-d H:i:s'))));
+                    $rangeApplied = true;
+                } catch (\Throwable $e) {}
+            }
+
+            if (!$rangeApplied) {
+                $months = [];
+                foreach ($monthsFilter as $m) {
+                    if (preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $m)) { $months[] = $m; }
+                }
+                if (count($months) > 0) {
+                    $or = [];
+                    foreach ($months as $m) {
+                        try {
+                            $dt = new \DateTimeImmutable($m . '-01 00:00:00');
+                            $start = $dt->format('Y-m-d H:i:s');
+                            $end = $dt->modify('first day of next month')->format('Y-m-d H:i:s');
+                            $or[] = $qb->expr()->andX(
+                                $qb->expr()->gte('occurred_at', $qb->createNamedParameter($start)),
+                                $qb->expr()->lt('occurred_at', $qb->createNamedParameter($end))
+                            );
+                        } catch (\Throwable $e) { /* ignore invalid */ }
+                    }
+                    if (count($or) > 0) {
+                        $qb->andWhere(call_user_func_array([$qb->expr(), 'orX'], $or));
+                    }
+                }
+            }
             $rows = $qb->execute()->fetchAll();
             return new JSONResponse(['expenses' => $rows]);
         } catch (\Throwable $e) {

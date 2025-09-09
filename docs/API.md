@@ -2,7 +2,7 @@
 
 Diese Dokumentation ist für die Implementierung der Flutter‑App ausgelegt. Sie beschreibt alle relevanten OCS‑Endpunkte inklusive Request/Response‑Schemas und einen kompakten Flutter/Dart‑Beispielservice.
 
-Version: 0.2.0
+Version: 0.2.1
 
 ## Überblick
 
@@ -64,6 +64,13 @@ Books
 
 Expenses
 - GET `/books/{id}/expenses` → `{ "expenses": Expense[] }`
+  - Optional: Monatsfilter per Query
+    - Einzelmonat: `?month=YYYY-MM`
+    - Mehrere Monate (wiederholt): `?month=2025-07&month=2025-08`
+    - Oder kommasepariert: `?months=2025-07,2025-08,2025-09`
+    - Alternativ Zeitraum: `?from=YYYY-MM[&to=YYYY-MM]` (inkl. `from` bis exkl. Monat nach `to`)
+  - Filter wirkt als OR über Monatsbereiche (jeweils von Monatsbeginn inkl. bis Folgemonatsbeginn exkl.).
+  - Priorität: Wenn `from`/`to` gesetzt ist, wird die Monatsliste ignoriert.
 - POST `/books/{id}/expenses` Body `{ amount: number, description?: string, date: "YYYY-MM-DD", currency?: string }` → `201 { id: number }`
 - PATCH `/books/{id}/expenses/{eid}` Body beliebiges Teilset `{ amount?, description?, date?, currency? }` → `{ ok: true }`
 - DELETE `/books/{id}/expenses/{eid}` → `{ ok: true }`
@@ -131,6 +138,31 @@ class NcApiService {
   // Expenses
   Future<List<dynamic>> listExpenses(int bookId) async {
     final res = await _dio.get('/books/$bookId/expenses');
+    return (res.data['expenses'] as List?) ?? [];
+  }
+
+  // Mit Monatsfilter
+  Future<List<dynamic>> listExpensesByMonths(int bookId, List<String> months) async {
+    // months-Elemente: 'YYYY-MM'
+    final query = months.isEmpty
+        ? ''
+        : months.map((m) => 'month=' + Uri.encodeQueryComponent(m)).join('&');
+    final path = query.isEmpty
+        ? '/books/$bookId/expenses'
+        : '/books/$bookId/expenses?$query';
+    final res = await _dio.get(path);
+    return (res.data['expenses'] as List?) ?? [];
+  }
+
+  // Mit Zeitraumfilter (from/to als 'YYYY-MM')
+  Future<List<dynamic>> listExpensesByRange(int bookId, {String? from, String? to}) async {
+    final q = <String>[];
+    if (from != null) q.add('from=' + Uri.encodeQueryComponent(from));
+    if (to != null) q.add('to=' + Uri.encodeQueryComponent(to));
+    final path = q.isEmpty
+        ? '/books/$bookId/expenses'
+        : '/books/$bookId/expenses?' + q.join('&');
+    final res = await _dio.get(path);
     return (res.data['expenses'] as List?) ?? [];
   }
 

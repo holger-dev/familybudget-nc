@@ -93,6 +93,21 @@ try {
     echo json_encode($data, JSON_PRETTY_PRINT) . "\n";
     if ($st !== 200) { throw new \RuntimeException('Expenses list failed'); }
 
+    // 5b) List expenses filtered by current month
+    $ym = date('Y-m');
+    printStep('GET /books/{id}/expenses?month=' . $ym);
+    [$st, $data] = req($base, $user, $pass, "/books/$bookId/expenses?month=" . urlencode($ym));
+    echo "Status: $st\n";
+    echo json_encode($data, JSON_PRETTY_PRINT) . "\n";
+    if ($st !== 200) { throw new \RuntimeException('Expenses list (filtered) failed'); }
+
+    // 5c) List expenses by range (from/to)
+    printStep('GET /books/{id}/expenses?from=' . $ym . '&to=' . $ym);
+    [$st, $data] = req($base, $user, $pass, "/books/$bookId/expenses?from=" . urlencode($ym) . "&to=" . urlencode($ym));
+    echo "Status: $st\n";
+    echo json_encode($data, JSON_PRETTY_PRINT) . "\n";
+    if ($st !== 200) { throw new \RuntimeException('Expenses list (range) failed'); }
+
     // 6) Update expense
     printStep('PATCH /books/{id}/expenses/{eid}');
     [$st, $data] = req($base, $user, $pass, "/books/$bookId/expenses/$expenseId", 'PATCH', [
@@ -123,4 +138,3 @@ try {
     fwrite(STDERR, "\nERROR: " . $e->getMessage() . "\n");
     exit(2);
 }
-

@@ -7,7 +7,7 @@
         Native Nextcloud-App zur Verwaltung von Familienausgaben mit Multi-User-Support,
         Kategorien, Einladungen und monatlicher Auswertung inkl. Split.
     ]]></description>
-    <version>0.2.0</version>
+    <version>0.2.1</version>
     <licence>agpl</licence>
     <author>Familybudget Contributors</author>
     <namespace>FamilyBudget</namespace>
