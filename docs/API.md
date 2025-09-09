@@ -2,7 +2,7 @@
 
 Diese Dokumentation ist für die Implementierung der Flutter‑App ausgelegt. Sie beschreibt alle relevanten OCS‑Endpunkte inklusive Request/Response‑Schemas und einen kompakten Flutter/Dart‑Beispielservice.
 
-Version: 0.2.1
+Version: 0.2.2
 
 ## Überblick
 

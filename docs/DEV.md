@@ -1,6 +1,6 @@
 # FamilyBudget – DEV Notes
 
-Version: 0.2.1
+Version: 0.2.2
 
 Dieses Dokument sammelt den aktuellen Stand der App, Dev‑Workflow und die geplante Roadmap, damit zukünftige Sessions schnell andocken können.
 
@@ -108,4 +108,3 @@ Qualität/Sicherheit
 - API: `docs/API.md`
 - Smoketest: `scripts/ocs_smoke.php`
 - Makefile‑Targets: `make up|down|exec|occ|build|watch`
-
