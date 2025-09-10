@@ -33,7 +33,7 @@ FamilyBudget ist eine reguläre Nextcloud‑App.
 
 ## Kompatibilität
 
-- Nextcloud: Versionen 27–30
+- Nextcloud: Versionen 27–31
 - PHP: ab 8.1
 
 ## Berechtigungen & Datenschutz

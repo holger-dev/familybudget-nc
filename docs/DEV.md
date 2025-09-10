@@ -1,6 +1,6 @@
 # FamilyBudget – DEV Notes
 
-Version: 0.2.2
+Version: 0.2.3
 
 Dieses Dokument sammelt den aktuellen Stand der App, Dev‑Workflow und die geplante Roadmap, damit zukünftige Sessions schnell andocken können.
 
@@ -37,7 +37,7 @@ Frontend:
 ## Dev‑Workflow
 
 Voraussetzungen:
-- Node.js (für Frontend‑Build), PHP 8.1+, Nextcloud 27–30
+- Node.js (für Frontend‑Build), PHP 8.1+, Nextcloud 27–31
 
 Docker‑Setup (empfohlen):
 - `make up` – Nextcloud starten

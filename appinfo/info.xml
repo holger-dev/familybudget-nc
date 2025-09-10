@@ -7,7 +7,7 @@
         Native Nextcloud-App zur Verwaltung von Familienausgaben mit Multi-User-Support,
         Kategorien, Einladungen und monatlicher Auswertung inkl. Split.
     ]]></description>
-    <version>0.2.2</version>
+    <version>0.2.3</version>
     <licence>agpl</licence>
     <author>Familybudget Contributors</author>
     <namespace>FamilyBudget</namespace>
@@ -20,7 +20,7 @@
         <admin>https://heidkamp.dev</admin>
     </documentation>
     <dependencies>
-        <nextcloud min-version="27" max-version="30"/>
+        <nextcloud min-version="27" max-version="31"/>
         <php min-version="8.1"/>
     </dependencies>
     <navigations>
