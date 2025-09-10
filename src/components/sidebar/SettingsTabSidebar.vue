@@ -26,6 +26,7 @@ export default {
     return {
       localName: this.book?.name || '',
       dirty: false,
+      
     }
   },
   watch: {
@@ -55,4 +56,11 @@ export default {
 .row { display: grid; gap: 8px; }
 .row.danger { border-top: 1px solid var(--color-border); padding-top: 12px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.group { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+.file-label { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--color-border);
+  border-radius: 6px; cursor: pointer; }
+.file-label input[type="file"] { display:none; }
+.hint { color: var(--color-text-maxcontrast); opacity: .7; }
+.divider { height:0; border-top: 1px solid var(--color-border); margin: 8px 0; }
+.section-title { margin: 0; font-size: 0.95rem; color: var(--color-text-maxcontrast); opacity:.9; }
 </style>

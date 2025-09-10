@@ -1,6 +1,6 @@
 # FamilyBudget – DEV Notes
 
-Version: 0.2.4
+Version: 0.3.0
 
 Dieses Dokument sammelt den aktuellen Stand der App, Dev‑Workflow und die geplante Roadmap, damit zukünftige Sessions schnell andocken können.
 

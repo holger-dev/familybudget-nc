@@ -26,6 +26,7 @@
       @close="sidebarOpen = false"
       @rename="onRenameBook"
       @delete="onDeleteBook"
+      @imported="onImported"
     />
     <ExpenseCreateModal v-if="showCreateModal" :expense="editingExpense" @close="closeExpenseModal" @save="saveExpense" />
   </NcContent>
@@ -166,6 +167,9 @@ export default {
         await this.loadExpenses()
         showSuccess('Buch gelöscht')
       } catch (_) { showError('Buch löschen fehlgeschlagen') }
+    },
+    async onImported() {
+      await this.loadExpenses()
     },
   },
   async mounted() {

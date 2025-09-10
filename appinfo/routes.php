@@ -31,6 +31,9 @@ return [
         ['name' => 'ocsApi#booksMembers', 'url' => '/books/{id}/members', 'verb' => 'GET'],
         ['name' => 'ocsApi#booksRemoveMember', 'url' => '/books/{id}/members/{uid}', 'verb' => 'DELETE'],
         ['name' => 'ocsApi#booksDelete', 'url' => '/books/{id}', 'verb' => 'DELETE'],
+        // Import/Export
+        ['name' => 'ocsApi#booksExportCsv', 'url' => '/books/{id}/export.csv', 'verb' => 'GET'],
+        ['name' => 'ocsApi#booksImportCsv', 'url' => '/books/{id}/import', 'verb' => 'POST'],
         // Expenses
         ['name' => 'ocsApi#expensesIndex', 'url' => '/books/{id}/expenses', 'verb' => 'GET'],
         ['name' => 'ocsApi#expensesCreate', 'url' => '/books/{id}/expenses', 'verb' => 'POST'],

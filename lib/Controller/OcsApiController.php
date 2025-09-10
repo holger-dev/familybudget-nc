@@ -9,6 +9,7 @@ use OCP\AppFramework\OCSController;
 use OCP\IRequest;
 use OCP\IUserSession;
 use OCP\IDBConnection;
+use OCP\AppFramework\Http\TextPlainResponse;
 
 class OcsApiController extends OCSController
 {
@@ -504,5 +505,236 @@ class OcsApiController extends OCSController
             ))->setMaxResults(1);
         $row = $qb->executeQuery()->fetchOne();
         return $row !== false;
+    }
+
+    /**
+     * Export all expenses of a book as CSV.
+     * Columns: date,amount,currency,description,user_uid
+     * @NoAdminRequired
+     */
+    public function booksExportCsv(int $id)
+    {
+        $user = $this->userSession->getUser();
+        if ($user === null) { return new DataResponse(['message' => 'Unauthorized'], 401); }
+        $uid = $user->getUID();
+        if (!$this->isMember($id, $uid)) { return new DataResponse(['message' => 'Forbidden'], 403); }
+        try {
+            $qb = $this->db->getQueryBuilder();
+            $qb->select('occurred_at', 'amount_cents', 'currency', 'description', 'user_uid')
+                ->from('fc_expenses')
+                ->where($qb->expr()->eq('book_id', $qb->createNamedParameter($id)))
+                ->orderBy('occurred_at', 'ASC')
+                ->addOrderBy('id', 'ASC');
+            $rows = $qb->execute()->fetchAll();
+            $fh = fopen('php://temp', 'r+');
+            // Header
+            fputcsv($fh, ['date','amount','currency','description','user_uid']);
+            foreach ($rows as $r) {
+                $date = substr((string)($r['occurred_at'] ?? ''), 0, 10);
+                $amount = number_format(((int)$r['amount_cents']) / 100, 2, '.', '');
+                $currency = (string)($r['currency'] ?? 'EUR');
+                $desc = $r['description'] !== null ? (string)$r['description'] : '';
+                $userUid = (string)($r['user_uid'] ?? '');
+                fputcsv($fh, [$date, $amount, $currency, $desc, $userUid]);
+            }
+            rewind($fh);
+            $csv = stream_get_contents($fh) ?: '';
+            fclose($fh);
+            $resp = new TextPlainResponse($csv);
+            $resp->addHeader('Content-Type', 'text/csv; charset=UTF-8');
+            $resp->addHeader('Content-Disposition', 'attachment; filename="familybudget-book-' . $id . '.csv"');
+            return $resp;
+        } catch (\Throwable $e) {
+            $logger = \OC::$server->get(\OCP\ILogger::class);
+            $logger->error('FamilyBudget OCS export failed: ' . $e->getMessage(), ['app' => 'familybudget']);
+            return new DataResponse(['message' => 'Internal error'], 500);
+        }
+    }
+
+    /**
+     * Import CSV for a book (owner only). Replaces all expenses in the book.
+     * Requires valid CSV parse first, then deletes and inserts in a transaction.
+     * Accepted input: raw text/csv in request body or multipart field "file".
+     * @NoAdminRequired
+     */
+    public function booksImportCsv(int $id): DataResponse
+    {
+        $user = $this->userSession->getUser();
+        if ($user === null) { return new DataResponse(['message' => 'Unauthorized'], 401); }
+        $caller = $user->getUID();
+        // owner check
+        $qbC = $this->db->getQueryBuilder();
+        $qbC->select('role')->from('fc_book_members')
+            ->where($qbC->expr()->andX(
+                $qbC->expr()->eq('book_id', $qbC->createNamedParameter($id)),
+                $qbC->expr()->eq('user_uid', $qbC->createNamedParameter($caller))
+            ))->setMaxResults(1);
+        $role = $qbC->executeQuery()->fetchOne();
+        if ($role !== 'owner') { return new DataResponse(['message' => 'Forbidden'], 403); }
+
+        // Read input
+        $content = '';
+        try {
+            // Try uploaded file first (multipart)
+            $uploaded = $this->request->getUploadedFile('file');
+            if (is_object($uploaded)) {
+                // Nextcloud IUploadedFile
+                if (method_exists($uploaded, 'getTempFile')) {
+                    $tmp = $uploaded->getTempFile();
+                    if ($tmp && is_readable($tmp)) { $content = (string)file_get_contents($tmp); }
+                } elseif (method_exists($uploaded, 'getTemporaryFile')) {
+                    $tmp = $uploaded->getTemporaryFile();
+                    if ($tmp && is_readable($tmp)) { $content = (string)file_get_contents($tmp); }
+                }
+            } elseif (is_array($uploaded) && isset($uploaded['tmp_name']) && is_readable($uploaded['tmp_name'])) {
+                $content = (string)file_get_contents($uploaded['tmp_name']);
+            }
+        } catch (\Throwable $e) { /* ignore, fall back to raw */ }
+        if ($content === '') {
+            $content = (string)(@file_get_contents('php://input') ?: '');
+        }
+        if (trim($content) === '') { return new DataResponse(['message' => 'Empty CSV'], 400); }
+
+        // Parse CSV to array (validate fully before modifying DB)
+        $rows = [];
+        $errors = [];
+        $members = $this->fetchMembersSet($id); // set of user_uids
+        try {
+            $delimiter = $this->detectDelimiter($content);
+            $fh = fopen('php://temp', 'r+');
+            fwrite($fh, $content);
+            rewind($fh);
+            $header = fgetcsv($fh, 0, $delimiter);
+            if (!is_array($header)) { throw new \RuntimeException('Missing header'); }
+            $map = $this->mapHeader($header);
+            if (!isset($map['date']) || !isset($map['amount'])) {
+                throw new \RuntimeException('Required columns: date, amount');
+            }
+            $line = 1;
+            while (($cols = fgetcsv($fh, 0, $delimiter)) !== false) {
+                $line++;
+                if (count($cols) === 1 && trim((string)$cols[0]) === '') { continue; }
+                $date = $this->col($cols, $map, 'date');
+                $amountStr = $this->col($cols, $map, 'amount');
+                $currency = $this->col($cols, $map, 'currency', 'EUR');
+                $desc = $this->col($cols, $map, 'description', '');
+                $userUid = $this->col($cols, $map, 'user_uid', $caller);
+
+                if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/', $date)) {
+                    $errors[] = "Line $line: invalid date '$date'";
+                    continue;
+                }
+                // Allow comma or dot decimals
+                $amountNorm = str_replace(',', '.', (string)$amountStr);
+                if (!is_numeric($amountNorm)) {
+                    $errors[] = "Line $line: invalid amount '$amountStr'";
+                    continue;
+                }
+                $amount = (float)$amountNorm;
+                if ($amount <= 0) {
+                    $errors[] = "Line $line: amount must be > 0";
+                    continue;
+                }
+                // If user_uid missing or not a member, fallback to caller (owner)
+                if ($userUid === '' || !isset($members[$userUid])) {
+                    $userUid = $caller;
+                }
+                $rows[] = [
+                    'date' => $date,
+                    'amount_cents' => (int)round($amount * 100),
+                    'currency' => $currency !== '' ? $currency : 'EUR',
+                    'description' => $desc !== '' ? $desc : null,
+                    'user_uid' => $userUid,
+                ];
+            }
+            fclose($fh);
+        } catch (\Throwable $e) {
+            return new DataResponse(['message' => 'CSV parse failed', 'error' => $e->getMessage()], 400);
+        }
+
+        if (count($errors) > 0) {
+            return new DataResponse(['message' => 'CSV validation failed', 'errors' => $errors], 400);
+        }
+
+        // Replace data in a single transaction
+        try {
+            $this->db->beginTransaction();
+            $qbDel = $this->db->getQueryBuilder();
+            $qbDel->delete('fc_expenses')->where($qbDel->expr()->eq('book_id', $qbDel->createNamedParameter($id)))->executeStatement();
+            $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
+            foreach ($rows as $r) {
+                $qb = $this->db->getQueryBuilder();
+                $qb->insert('fc_expenses')->values([
+                    'book_id' => $qb->createNamedParameter($id),
+                    'user_uid' => $qb->createNamedParameter($r['user_uid']),
+                    'amount_cents' => $qb->createNamedParameter($r['amount_cents']),
+                    'currency' => $qb->createNamedParameter($r['currency']),
+                    'description' => $qb->createNamedParameter($r['description']),
+                    'occurred_at' => $qb->createNamedParameter($r['date'] . ' 00:00:00'),
+                    'created_at' => $qb->createNamedParameter($now),
+                ])->executeStatement();
+            }
+            $this->db->commit();
+            return new DataResponse(['ok' => true, 'imported' => count($rows)]);
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            return new DataResponse(['message' => 'Import failed'], 500);
+        }
+    }
+
+    private function fetchMembersSet(int $bookId): array
+    {
+      $set = [];
+      try {
+        $qb = $this->db->getQueryBuilder();
+        $qb->select('user_uid')->from('fc_book_members')
+           ->where($qb->expr()->eq('book_id', $qb->createNamedParameter($bookId)));
+        $rows = $qb->execute()->fetchAll();
+        foreach ($rows as $r) {
+            $uid = (string)($r['user_uid'] ?? '');
+            if ($uid !== '') { $set[$uid] = true; }
+        }
+      } catch (\Throwable $e) {}
+      return $set;
+    }
+
+    private function detectDelimiter(string $csv): string
+    {
+        // Try to decide based on header structure
+        $firstLine = strtok($csv, "\r\n");
+        if ($firstLine === false) { return ','; }
+        $c1 = str_getcsv($firstLine, ',');
+        $c2 = str_getcsv($firstLine, ';');
+        $score = function(array $cols): int {
+            $cols = array_map(function($v){ return strtolower(trim((string)$v)); }, $cols);
+            $ok = 0;
+            foreach (['date','amount'] as $req) { if (in_array($req, $cols, true)) $ok++; }
+            return $ok;
+        };
+        $s1 = $score($c1);
+        $s2 = $score($c2);
+        if ($s1 > $s2) return ',';
+        if ($s2 > $s1) return ';';
+        // fallback: count occurrences in whole text
+        $commas = substr_count($csv, ',');
+        $semis = substr_count($csv, ';');
+        return ($semis > $commas) ? ';' : ',';
+    }
+
+    private function mapHeader(array $header): array
+    {
+        $map = [];
+        foreach ($header as $i => $name) {
+            $n = strtolower(trim((string)$name));
+            if ($n !== '') { $map[$n] = $i; }
+        }
+        return $map;
+    }
+
+    private function col(array $cols, array $map, string $key, $default = ''): string
+    {
+        if (!isset($map[$key])) { return (string)$default; }
+        $idx = (int)$map[$key];
+        return isset($cols[$idx]) ? (string)$cols[$idx] : (string)$default;
     }
 }

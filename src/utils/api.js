@@ -70,3 +70,19 @@ export async function apiFetch(path, options = {}) {
 export function ocs(path) {
   return `/ocs/v2.php${path}`
 }
+
+export async function ocsFetch(path, options = {}) {
+  const headers = new Headers(options.headers || {})
+  headers.set('OCS-APIRequest', 'true')
+  if (!headers.has('Accept')) headers.set('Accept', 'application/json')
+  const fetchOpts = { ...options, headers }
+  if (!('credentials' in fetchOpts)) fetchOpts.credentials = 'same-origin'
+  let url = ocs(path)
+  // Prefer JSON responses from OCS unless requesting CSV
+  const accept = headers.get('Accept') || ''
+  const wantsCsv = accept.includes('text/csv') || /\.csv(\?|$)/.test(path)
+  if (!wantsCsv) {
+    url += (url.includes('?') ? '&' : '?') + 'format=json'
+  }
+  return fetch(url, fetchOpts)
+}

@@ -2,7 +2,7 @@
 
 Diese Dokumentation ist für die Implementierung der Flutter‑App ausgelegt. Sie beschreibt alle relevanten OCS‑Endpunkte inklusive Request/Response‑Schemas und einen kompakten Flutter/Dart‑Beispielservice.
 
-Version: 0.2.4
+Version: 0.3.0
 
 ## Überblick
 
@@ -74,6 +74,15 @@ Expenses
 - POST `/books/{id}/expenses` Body `{ amount: number, description?: string, date: "YYYY-MM-DD", currency?: string }` → `201 { id: number }`
 - PATCH `/books/{id}/expenses/{eid}` Body beliebiges Teilset `{ amount?, description?, date?, currency? }` → `{ ok: true }`
 - DELETE `/books/{id}/expenses/{eid}` → `{ ok: true }`
+
+Import/Export
+- GET `/books/{id}/export.csv` → CSV-Download des gesamten Buchs
+  - Spalten: `date,amount,currency,description,user_uid`
+  - `date`: `YYYY-MM-DD`, `amount`: Dezimal mit Punkt oder Komma, `currency`: z. B. `EUR`
+- POST `/books/{id}/import` Body: CSV (Content-Type `text/csv` oder multipart Feld `file`)
+  - Erfordert Owner-Rolle; ersetzt alle vorhandenen Ausgaben des Buchs
+  - Validierung: CSV muss vollständig lesbar sein; alle Zeilen mit gültigem Datum, Betrag > 0 und `user_uid` ist Mitglied des Buchs
+  - Bei Fehlern werden keine Daten verändert; Antwort `400` mit Fehlerliste
 
 Statuscodes
 - 200 OK, 201 Created
