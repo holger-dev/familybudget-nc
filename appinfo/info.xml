@@ -6,8 +6,11 @@
     <description><![CDATA[
         Native Nextcloud-App zur Verwaltung von Familienausgaben mit Multi-User-Support,
         Kategorien, Einladungen und monatlicher Auswertung inkl. Split.
+
+        Info: Läuft direkt in eurer Nextcloud-Instanz; unterstützt Nextcloud 27–31.
+        Projekt in aktiver Entwicklung – Feedback und Issues willkommen.
     ]]></description>
-    <version>0.3.0</version>
+    <version>0.3.1</version>
     <licence>agpl</licence>
     <author>Familybudget Contributors</author>
     <namespace>FamilyBudget</namespace>
@@ -15,6 +18,7 @@
     <website>https://heidkamp.dev</website>
     <repository type="git">https://github.com/holger-dev/familybudget-nc</repository>
     <bugs>https://github.com/holger-dev/familybudget-nc/issues</bugs>
+    <screenshot>https://raw.githubusercontent.com/holger-dev/familybudget-nc/main/store.png</screenshot>
     <documentation>
         <user>https://heidkamp.dev</user>
         <admin>https://heidkamp.dev</admin>
