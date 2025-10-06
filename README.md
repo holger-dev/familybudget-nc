@@ -13,7 +13,7 @@ FamilyBudget ist eine native Nextcloud‑App, mit der Familien, WGs oder Teams g
 - Bearbeiten & Löschen: Ausgaben jederzeit anpassen oder entfernen
 - Übersicht: Monatliche Liste als Grundlage für faire Aufteilung/Splits
 - CSV: Buch vollständig exportieren/importieren (OCS)
-- iOS‑App: Im App Store (Familybudget)[https://apps.apple.com/de/app/familybudget/id6746215235]
+- iOS‑App: Im App Store [https://apps.apple.com/de/app/familybudget/id6746215235]
 
 ## So funktioniert’s
 
