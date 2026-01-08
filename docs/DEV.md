@@ -37,7 +37,7 @@ Frontend:
 ## Dev‑Workflow
 
 Voraussetzungen:
-- Node.js (für Frontend‑Build), PHP 8.1+, Nextcloud 27–31
+- Node.js (für Frontend‑Build), PHP 8.1+, Nextcloud 27–32
 
 Docker‑Setup (empfohlen):
 - `make up` – Nextcloud starten
