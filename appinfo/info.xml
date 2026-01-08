@@ -10,10 +10,11 @@
         Info: Läuft direkt in eurer Nextcloud-Instanz; unterstützt Nextcloud 27–31.
         Projekt in aktiver Entwicklung – Feedback und Issues willkommen.
     ]]></description>
-    <version>0.3.1</version>
+    <version>0.3.2</version>
     <licence>agpl</licence>
     <author>Familybudget Contributors</author>
     <namespace>FamilyBudget</namespace>
+    <bootstrap>OCA\FamilyBudget\AppInfo\Application</bootstrap>
     <category>tools</category>
     <website>https://heidkamp.dev</website>
     <repository type="git">https://github.com/holger-dev/familybudget-nc</repository>
@@ -24,7 +25,7 @@
         <admin>https://heidkamp.dev</admin>
     </documentation>
     <dependencies>
-        <nextcloud min-version="27" max-version="31"/>
+        <nextcloud min-version="27" max-version="32"/>
         <php min-version="8.1"/>
     </dependencies>
     <navigations>

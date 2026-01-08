@@ -12,7 +12,7 @@ services:
       - db:/var/lib/mysql
 
   nextcloud:
-    image: nextcloud:29-apache
+    image: nextcloud:32-apache
     restart: unless-stopped
     ports:
       - "8080:80"
@@ -31,7 +31,7 @@ services:
       - ./:/var/www/html/custom_apps/familybudget
 
   cron:
-    image: nextcloud:29-apache
+    image: nextcloud:32-apache
     restart: unless-stopped
     depends_on:
       - db
