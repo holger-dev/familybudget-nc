@@ -52,7 +52,7 @@ FamilyBudget bietet eine einfache REST‑API innerhalb von Nextcloud, z. B. für
 
 ## Mobile
 
-- iOS: Eine native iOS‑App ist bereits weit fortgeschritten und erscheint in Kürze. Sie nutzt dieselben Daten über die integrierte FamilyBudget‑API deiner Nextcloud‑Instanz.
+- iOS: Die iOS findet sich im Applestore oder hier: https://apps.apple.com/de/app/familybudget/id6746215235
 
 ## Support & Feedback
 
