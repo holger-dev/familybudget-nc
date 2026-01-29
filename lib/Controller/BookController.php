@@ -91,41 +91,49 @@ class BookController extends Controller
 
             // create book
             $qb = $this->db->getQueryBuilder();
-            $qb->insert('fc_books')
+            $affected = $qb->insert('fc_books')
                 ->values([
                     'owner_uid' => $qb->createNamedParameter($uid),
                     'name' => $qb->createNamedParameter($name),
                     'created_at' => $qb->createNamedParameter($now),
                 ])->executeStatement();
-
-            // fetch created id (avoid driver-specific lastInsertId)
-            $qbId = $this->db->getQueryBuilder();
-            $qbId->select('id')
-                ->from('fc_books')
-                ->where($qbId->expr()->andX(
-                    $qbId->expr()->eq('owner_uid', $qbId->createNamedParameter($uid)),
-                    $qbId->expr()->eq('name', $qbId->createNamedParameter($name)),
-                    $qbId->expr()->eq('created_at', $qbId->createNamedParameter($now))
-                ))
-                ->orderBy('id', 'DESC')
-                ->setMaxResults(1);
-            $bookId = (int)($qbId->execute()->fetchColumn() ?: 0);
+            if ($affected !== 1) {
+                throw new \RuntimeException('insert_book_failed');
+            }
+            $bookId = (int)$qb->getLastInsertId();
+            if ($bookId <= 0) {
+                throw new \RuntimeException('insert_book_id_failed');
+            }
 
             // add owner as member (role owner)
             $qb2 = $this->db->getQueryBuilder();
-            $qb2->insert('fc_book_members')
+            $affected2 = $qb2->insert('fc_book_members')
                 ->values([
                     'book_id' => $qb2->createNamedParameter($bookId),
                     'user_uid' => $qb2->createNamedParameter($uid),
                     'role' => $qb2->createNamedParameter('owner'),
                     'created_at' => $qb2->createNamedParameter($now),
                 ])->executeStatement();
+            if ($affected2 !== 1) {
+                throw new \RuntimeException('insert_member_failed');
+            }
 
             $this->db->commit();
             return new JSONResponse(['id' => $bookId, 'name' => $name, 'owner_uid' => $uid, 'role' => 'owner'], 201);
         } catch (\Throwable $e) {
             $this->db->rollBack();
-            return new JSONResponse(['message' => 'Create failed'], 500);
+            $detail = $e instanceof \RuntimeException ? $e->getMessage() : 'unexpected_error';
+            $logger = \OC::$server->get(\OCP\ILogger::class);
+            $logger->error('FamilyBudget book create failed: ' . $e->getMessage(), [
+                'app' => 'familybudget',
+                'user' => $uid,
+                'detail' => $detail,
+            ]);
+            return new JSONResponse([
+                'message' => 'Create failed',
+                'error' => 'book_create_failed',
+                'detail' => $detail,
+            ], 500);
         }
     }
 

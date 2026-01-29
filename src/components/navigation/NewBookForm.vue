@@ -13,6 +13,7 @@
 import NcTextField from '@nextcloud/vue/dist/Components/NcTextField.js'
 import NcButton from '@nextcloud/vue/dist/Components/NcButton.js'
 import { apiFetch } from '../../utils/api.js'
+import { showError } from '../../utils/notify'
 
 export default {
   name: 'NewBookForm',
@@ -32,6 +33,14 @@ export default {
         const b = await res.json()
         this.$emit('book-created', b)
         this.name = ''
+      } else {
+        let detail = ''
+        try {
+          const j = await res.json()
+          if (j?.detail) detail = ` (${j.detail})`
+          else if (j?.message) detail = ` (${j.message})`
+        } catch (_) {}
+        showError(`Buch anlegen fehlgeschlagen${detail}`)
       }
     },
   },
