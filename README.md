@@ -62,3 +62,4 @@ FamilyBudget bietet eine einfache REST‑API innerhalb von Nextcloud, z. B. für
 —
 
 Hinweis: Diese README richtet sich an Anwender. Entwickler‑Hinweise (Dev‑Setup, Docker, Build) wurden entfernt, um die Veröffentlichung im App‑Store/Repository nutzerfreundlich zu halten.
+Freddie Bot Test
