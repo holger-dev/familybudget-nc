@@ -31,6 +31,8 @@ FamilyBudget ist eine reguläre Nextcloud‑App.
 - Manuelle Installation (Administratoren):
   1) App‑Ordner `familybudget` in `custom_apps/` der Nextcloud‑Instanz ablegen
   2) App aktivieren: `occ app:enable familybudget`
+  
+Hinweis: Falls eure Nextcloud unter `/index.php` oder einem Webroot (z. B. `/nextcloud`) läuft, nutzt die App automatisch die korrekten Pfade. Bei API‑Problemen prüft die Basis‑URL der Instanz.
 
 ## Kompatibilität
 

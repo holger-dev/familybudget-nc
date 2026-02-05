@@ -1,5 +1,6 @@
 export function api(path) {
   const id = window.familyAppId || 'familybudget'
+  if (window?.OC?.generateUrl) return window.OC.generateUrl(`/apps/${id}${path}`)
   return `/apps/${id}${path}`
 }
 
@@ -68,6 +69,7 @@ export async function apiFetch(path, options = {}) {
 }
 
 export function ocs(path) {
+  if (window?.OC?.generateUrl) return window.OC.generateUrl(`/ocs/v2.php${path}`)
   return `/ocs/v2.php${path}`
 }
 
