@@ -55,7 +55,7 @@ jobs:
           app_private_key: ${{ secrets.APP_PRIVATE_KEY }}
           app_public_crt: ${{ secrets.APP_PUBLIC_CRT }}
         run: |
-          cd ../server/apps/${{ env.APP_NAME }} && make appstore
+          cd ../server/apps/${{ env.APP_NAME }} && make appstore APP_NAME=${{ env.APP_NAME }}
 
       - name: Upload app tarball to release
         uses: svenstaro/upload-release-action@483c1e56f95e88835747b1c7c60581215016cbf2

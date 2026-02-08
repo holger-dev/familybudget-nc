@@ -2,7 +2,7 @@ SHELL := /bin/bash
 
 COMPOSE := docker compose
 
-APP_NAME ?= $(shell sed -n 's:.*<id>\\(.*\\)</id>.*:\\1:p' appinfo/info.xml | head -n1)
+APP_NAME := $(or $(APP_NAME),$(shell sed -n 's:.*<id>\\(.*\\)</id>.*:\\1:p' appinfo/info.xml | head -n1))
 BUILD_DIR := $(CURDIR)/build
 APPSTORE_SIGN_DIR := $(BUILD_DIR)/sign
 APPSTORE_ARCHIVE_DIR := $(BUILD_DIR)/artifacts/appstore
