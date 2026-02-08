@@ -2,7 +2,7 @@ SHELL := /bin/bash
 
 COMPOSE := docker compose
 
-APP_NAME := $(shell sed -n 's:.*<id>\\(.*\\)</id>.*:\\1:p' appinfo/info.xml | head -n1)
+APP_NAME ?= $(shell sed -n 's:.*<id>\\(.*\\)</id>.*:\\1:p' appinfo/info.xml | head -n1)
 BUILD_DIR := $(CURDIR)/build
 APPSTORE_SIGN_DIR := $(BUILD_DIR)/sign
 APPSTORE_ARCHIVE_DIR := $(BUILD_DIR)/artifacts/appstore
@@ -43,6 +43,7 @@ fix-perms:
 	$(COMPOSE) exec -u root nextcloud bash -lc "chown -R www-data:www-data /var/www/html/apps /var/www/html/custom_apps /var/www/html/config /var/www/html/data && ls -ld /var/www/html/apps /var/www/html/custom_apps /var/www/html/config /var/www/html/data"
 
 appstore:
+	@if [ -z "$(APP_NAME)" ]; then echo "APP_NAME is empty (check appinfo/info.xml or pass APP_NAME=...)"; exit 1; fi
 	rm -rf $(APPSTORE_SIGN_DIR) $(APPSTORE_ARCHIVE_DIR)
 	mkdir -p $(APPSTORE_SIGN_DIR) $(APPSTORE_ARCHIVE_DIR)
 	rsync -a --delete \
