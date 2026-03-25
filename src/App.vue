@@ -24,11 +24,18 @@
       :book-id="store.currentBookId"
       :book="currentBook"
       @close="sidebarOpen = false"
+      @members-changed="onMembersChanged"
       @rename="onRenameBook"
       @delete="onDeleteBook"
       @imported="onImported"
     />
-    <ExpenseCreateModal v-if="showCreateModal" :expense="editingExpense" @close="closeExpenseModal" @save="saveExpense" />
+    <ExpenseCreateModal
+      v-if="showCreateModal"
+      :expense="editingExpense"
+      :book-members="bookMembers"
+      :current-user-uid="currentUid"
+      @close="closeExpenseModal"
+      @save="saveExpense" />
   </NcContent>
 </template>
 
@@ -60,6 +67,7 @@ export default {
       shareUsers: [],
       editingExpense: null,
       currentUid: null,
+      bookMembers: [],
     }
   },
   computed: {
@@ -80,7 +88,9 @@ export default {
   },
   methods: {
     centsToEuro(cents) { return (cents / 100).toFixed(2) },
-    onSelectBook() { this.loadExpenses() },
+    async onSelectBook() {
+      await Promise.all([this.loadExpenses(), this.loadBookMembers()])
+    },
     async createBook() { /* legacy, unused here */ },
     async invite() { /* legacy, unused here */ },
     async loadBooks() {
@@ -91,6 +101,17 @@ export default {
       if (!this.store.currentBookId) return
       const res = await apiFetch(`/books/${this.store.currentBookId}/expenses`)
       if (res.ok) { const j = await res.json(); this.store.expenses = j.expenses }
+    },
+    async loadBookMembers() {
+      if (!this.store.currentBookId) {
+        this.bookMembers = []
+        return
+      }
+      const res = await apiFetch(`/books/${this.store.currentBookId}/members`)
+      if (res.ok) {
+        const j = await res.json()
+        this.bookMembers = Array.isArray(j.members) ? j.members : []
+      }
     },
     async saveExpense(payload) {
       if (!this.store.currentBookId) return
@@ -107,7 +128,7 @@ export default {
         }
         this.showCreateModal = false
         this.editingExpense = null
-        await this.loadExpenses()
+        await Promise.all([this.loadExpenses(), this.loadBookMembers()])
       } catch (e) { showError('Speichern fehlgeschlagen') }
     },
     closeExpenseModal() { this.showCreateModal = false; this.editingExpense = null },
@@ -119,7 +140,7 @@ export default {
         const res = await apiFetch(`/books/${this.store.currentBookId}/expenses/${e.id}`, { method:'DELETE' })
         if (!res.ok) throw new Error('delete')
         showSuccess('Ausgabe gelöscht')
-        await this.loadExpenses()
+        await Promise.all([this.loadExpenses(), this.loadBookMembers()])
       } catch (_) { showError('Löschen fehlgeschlagen') }
     },
     sendInvites() {
@@ -169,12 +190,15 @@ export default {
       } catch (_) { showError('Buch löschen fehlgeschlagen') }
     },
     async onImported() {
-      await this.loadExpenses()
+      await Promise.all([this.loadExpenses(), this.loadBookMembers()])
+    },
+    async onMembersChanged() {
+      await this.loadBookMembers()
     },
   },
   async mounted() {
     await this.loadBooks();
-    if (this.store.currentBookId) await this.loadExpenses();
+    if (this.store.currentBookId) await Promise.all([this.loadExpenses(), this.loadBookMembers()]);
     try {
       const res = await fetch('/ocs/v2.php/cloud/user?format=json', { headers: { 'OCS-APIREQUEST': 'true', 'Accept': 'application/json' } })
       if (res.ok) { const j = await res.json(); this.currentUid = j?.ocs?.data?.id || null }

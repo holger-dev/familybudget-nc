@@ -101,10 +101,10 @@ class ExpenseController extends Controller
                     }
                 }
             }
-            $rows = $qb->execute()->fetchAll();
+            $rows = $qb->executeQuery()->fetchAllAssociative();
             return new JSONResponse(['expenses' => $rows]);
         } catch (\Throwable $e) {
-            $logger = \OC::$server->get(\OCP\ILogger::class);
+            $logger = \OC::$server->getLogger();
             $logger->error('FamilyBudget expenses query failed: ' . $e->getMessage(), ['app' => 'familybudget']);
             return new JSONResponse(['message' => 'Internal error'], 500);
         }
@@ -134,8 +134,12 @@ class ExpenseController extends Controller
         $desc = isset($input['description']) ? trim((string)$input['description']) : null;
         $date = isset($input['date']) ? (string)$input['date'] : null; // YYYY-MM-DD
         $currency = isset($input['currency']) ? (string)$input['currency'] : 'EUR';
+        $expenseUid = isset($input['user_uid']) ? trim((string)$input['user_uid']) : $uid;
         if ($amount <= 0 || $date === null) {
             return new JSONResponse(['message' => 'amount>0 and date required'], 400);
+        }
+        if ($expenseUid === '' || !$this->isMember($id, $expenseUid)) {
+            return new JSONResponse(['message' => 'user_uid must be a member of the book'], 400);
         }
         $occurredAt = $date . ' 00:00:00';
         $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
@@ -147,7 +151,7 @@ class ExpenseController extends Controller
             $qb->insert('fc_expenses')
                 ->values([
                     'book_id' => $qb->createNamedParameter($id),
-                    'user_uid' => $qb->createNamedParameter($uid),
+                    'user_uid' => $qb->createNamedParameter($expenseUid),
                     'amount_cents' => $qb->createNamedParameter($amountCents),
                     'currency' => $qb->createNamedParameter($currency),
                     'description' => $qb->createNamedParameter($desc),
@@ -223,6 +227,12 @@ class ExpenseController extends Controller
             $json = json_decode($raw, true);
             if (is_array($json)) { $input = $json; }
         }
+        if (isset($input['user_uid'])) {
+            $expenseUid = trim((string)$input['user_uid']);
+            if ($expenseUid === '' || !$this->isMember($id, $expenseUid)) {
+                return new JSONResponse(['message' => 'user_uid must be a member of the book'], 400);
+            }
+        }
         try {
             $this->db->beginTransaction();
             $qb = $this->db->getQueryBuilder();
@@ -232,6 +242,7 @@ class ExpenseController extends Controller
             if (array_key_exists('description', $input)) { $desc = $input['description'] !== null ? (string)$input['description'] : null; $qb->set('description', $qb->createNamedParameter($desc)); $has = true; }
             if (isset($input['date'])) { $occ = ((string)$input['date']) . ' 00:00:00'; $qb->set('occurred_at', $qb->createNamedParameter($occ)); $has = true; }
             if (isset($input['currency'])) { $qb->set('currency', $qb->createNamedParameter((string)$input['currency'])); $has = true; }
+            if (isset($input['user_uid'])) { $qb->set('user_uid', $qb->createNamedParameter($expenseUid)); $has = true; }
             if (!$has) { $this->db->rollBack(); return new JSONResponse(['message' => 'Nothing to update'], 400); }
             $qb->where($qb->expr()->andX(
                 $qb->expr()->eq('id', $qb->createNamedParameter($eid)),

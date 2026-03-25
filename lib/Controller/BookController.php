@@ -39,27 +39,27 @@ class BookController extends Controller
                 ->from('fc_books', 'b')
                 ->innerJoin('b', 'fc_book_members', 'm', 'b.id = m.book_id')
                 ->where($qb->expr()->eq('m.user_uid', $qb->createNamedParameter($uid)));
-            $rows = $qb->execute()->fetchAll();
+            $rows = $qb->executeQuery()->fetchAllAssociative();
             if (!is_array($rows) || count($rows) === 0) {
                 // Fallback: return books owned by user (in case membership insert failed earlier)
                 $qb2 = $this->db->getQueryBuilder();
                 $qb2->select('id', 'name', 'owner_uid')
                     ->from('fc_books')
                     ->where($qb2->expr()->eq('owner_uid', $qb2->createNamedParameter($uid)));
-                $owned = $qb2->execute()->fetchAll();
+                $owned = $qb2->executeQuery()->fetchAllAssociative();
                 $owned = array_map(static function(array $r) { $r['role'] = 'owner'; return $r; }, $owned);
                 return new JSONResponse(['books' => $owned]);
             }
             return new JSONResponse(['books' => $rows]);
         } catch (\Throwable $e) {
             // On error, log and fallback to owned books
-            $logger = \OC::$server->get(\OCP\ILogger::class);
+            $logger = \OC::$server->getLogger();
             $logger->error('FamilyBudget books query failed: ' . $e->getMessage(), ['app' => 'familybudget']);
             $qb2 = $this->db->getQueryBuilder();
             $qb2->select('id', 'name', 'owner_uid')
                 ->from('fc_books')
                 ->where($qb2->expr()->eq('owner_uid', $qb2->createNamedParameter($uid)));
-            $owned = $qb2->execute()->fetchAll();
+            $owned = $qb2->executeQuery()->fetchAllAssociative();
             $owned = array_map(static function(array $r) { $r['role'] = 'owner'; return $r; }, $owned);
             return new JSONResponse(['books' => $owned]);
         }
@@ -123,7 +123,7 @@ class BookController extends Controller
         } catch (\Throwable $e) {
             $this->db->rollBack();
             $detail = $e instanceof \RuntimeException ? $e->getMessage() : 'unexpected_error';
-            $logger = \OC::$server->get(\OCP\ILogger::class);
+            $logger = \OC::$server->getLogger();
             $logger->error('FamilyBudget book create failed: ' . $e->getMessage(), [
                 'app' => 'familybudget',
                 'user' => $uid,
@@ -264,7 +264,7 @@ class BookController extends Controller
             ->from('fc_book_members')
             ->where($qb->expr()->eq('book_id', $qb->createNamedParameter($id)))
             ->orderBy('created_at', 'ASC');
-        $rows = $qb->execute()->fetchAll();
+        $rows = $qb->executeQuery()->fetchAllAssociative();
         if (!is_array($rows) || count($rows) === 0) {
             // Fallback for legacy books without membership rows: include owner as member
             $qbOwner = $this->db->getQueryBuilder();

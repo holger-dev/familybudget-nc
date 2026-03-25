@@ -39,19 +39,19 @@ class OcsApiController extends OCSController
                 ->from('fc_books', 'b')
                 ->innerJoin('b', 'fc_book_members', 'm', 'b.id = m.book_id')
                 ->where($qb->expr()->eq('m.user_uid', $qb->createNamedParameter($uid)));
-            $rows = $qb->execute()->fetchAll();
+            $rows = $qb->executeQuery()->fetchAllAssociative();
             if (!is_array($rows) || count($rows) === 0) {
                 $qb2 = $this->db->getQueryBuilder();
                 $qb2->select('id', 'name', 'owner_uid')
                     ->from('fc_books')
                     ->where($qb2->expr()->eq('owner_uid', $qb2->createNamedParameter($uid)));
-                $owned = $qb2->execute()->fetchAll();
+                $owned = $qb2->executeQuery()->fetchAllAssociative();
                 $owned = array_map(static function(array $r) { $r['role'] = 'owner'; return $r; }, $owned);
                 return new DataResponse(['books' => $owned]);
             }
             return new DataResponse(['books' => $rows]);
         } catch (\Throwable $e) {
-            $logger = \OC::$server->get(\OCP\ILogger::class);
+            $logger = \OC::$server->getLogger();
             $logger->error('FamilyBudget OCS books failed: ' . $e->getMessage(), ['app' => 'familybudget']);
             return new DataResponse(['message' => 'Internal error'], 500);
         }
@@ -104,7 +104,7 @@ class OcsApiController extends OCSController
         } catch (\Throwable $e) {
             $this->db->rollBack();
             $detail = $e instanceof \RuntimeException ? $e->getMessage() : 'unexpected_error';
-            $logger = \OC::$server->get(\OCP\ILogger::class);
+            $logger = \OC::$server->getLogger();
             $logger->error('FamilyBudget OCS book create failed: ' . $e->getMessage(), [
                 'app' => 'familybudget',
                 'user' => $uid,
@@ -212,7 +212,7 @@ class OcsApiController extends OCSController
         $qb->select('user_uid', 'role', 'created_at')->from('fc_book_members')
             ->where($qb->expr()->eq('book_id', $qb->createNamedParameter($id)))
             ->orderBy('created_at', 'ASC');
-        $rows = $qb->execute()->fetchAll();
+        $rows = $qb->executeQuery()->fetchAllAssociative();
         if (!is_array($rows) || count($rows) === 0) {
             $qbOwner = $this->db->getQueryBuilder();
             $qbOwner->select('owner_uid')->from('fc_books')
@@ -376,10 +376,10 @@ class OcsApiController extends OCSController
                     }
                 }
             }
-            $rows = $qb->execute()->fetchAll();
+            $rows = $qb->executeQuery()->fetchAllAssociative();
             return new DataResponse(['expenses' => $rows]);
         } catch (\Throwable $e) {
-            $logger = \OC::$server->get(\OCP\ILogger::class);
+            $logger = \OC::$server->getLogger();
             $logger->error('FamilyBudget OCS expenses list failed: ' . $e->getMessage(), ['app' => 'familybudget']);
             return new DataResponse(['message' => 'Internal error'], 500);
         }
@@ -408,8 +408,12 @@ class OcsApiController extends OCSController
         $desc = isset($input['description']) ? trim((string)$input['description']) : null;
         $date = isset($input['date']) ? (string)$input['date'] : null; // YYYY-MM-DD
         $currency = isset($input['currency']) ? (string)$input['currency'] : 'EUR';
+        $expenseUid = isset($input['user_uid']) ? trim((string)$input['user_uid']) : $uid;
         if ($amount <= 0 || $date === null) {
             return new DataResponse(['message' => 'amount>0 and date required'], 400);
+        }
+        if ($expenseUid === '' || !$this->isMember($id, $expenseUid)) {
+            return new DataResponse(['message' => 'user_uid must be a member of the book'], 400);
         }
         $occurredAt = $date . ' 00:00:00';
         $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
@@ -421,7 +425,7 @@ class OcsApiController extends OCSController
             $qb->insert('fc_expenses')
                 ->values([
                     'book_id' => $qb->createNamedParameter($id),
-                    'user_uid' => $qb->createNamedParameter($uid),
+                    'user_uid' => $qb->createNamedParameter($expenseUid),
                     'amount_cents' => $qb->createNamedParameter($amountCents),
                     'currency' => $qb->createNamedParameter($currency),
                     'description' => $qb->createNamedParameter($desc),
@@ -456,6 +460,12 @@ class OcsApiController extends OCSController
             $json = json_decode($raw, true);
             if (is_array($json)) { $input = $json; }
         }
+        if (isset($input['user_uid'])) {
+            $expenseUid = trim((string)$input['user_uid']);
+            if ($expenseUid === '' || !$this->isMember($id, $expenseUid)) {
+                return new DataResponse(['message' => 'user_uid must be a member of the book'], 400);
+            }
+        }
         try {
             $this->db->beginTransaction();
             $qb = $this->db->getQueryBuilder();
@@ -465,6 +475,7 @@ class OcsApiController extends OCSController
             if (array_key_exists('description', $input)) { $desc = $input['description'] !== null ? (string)$input['description'] : null; $qb->set('description', $qb->createNamedParameter($desc)); $has = true; }
             if (isset($input['date'])) { $occ = ((string)$input['date']) . ' 00:00:00'; $qb->set('occurred_at', $qb->createNamedParameter($occ)); $has = true; }
             if (isset($input['currency'])) { $qb->set('currency', $qb->createNamedParameter((string)$input['currency'])); $has = true; }
+            if (isset($input['user_uid'])) { $qb->set('user_uid', $qb->createNamedParameter($expenseUid)); $has = true; }
             if (!$has) { $this->db->rollBack(); return new DataResponse(['message' => 'Nothing to update'], 400); }
             $qb->where($qb->expr()->andX(
                 $qb->expr()->eq('id', $qb->createNamedParameter($eid)),
@@ -538,7 +549,7 @@ class OcsApiController extends OCSController
                 ->where($qb->expr()->eq('book_id', $qb->createNamedParameter($id)))
                 ->orderBy('occurred_at', 'ASC')
                 ->addOrderBy('id', 'ASC');
-            $rows = $qb->execute()->fetchAll();
+            $rows = $qb->executeQuery()->fetchAllAssociative();
             $fh = fopen('php://temp', 'r+');
             // Header
             fputcsv($fh, ['date','amount','currency','description','user_uid']);
@@ -558,7 +569,7 @@ class OcsApiController extends OCSController
             $resp->addHeader('Content-Disposition', 'attachment; filename="familybudget-book-' . $id . '.csv"');
             return $resp;
         } catch (\Throwable $e) {
-            $logger = \OC::$server->get(\OCP\ILogger::class);
+            $logger = \OC::$server->getLogger();
             $logger->error('FamilyBudget OCS export failed: ' . $e->getMessage(), ['app' => 'familybudget']);
             return new DataResponse(['message' => 'Internal error'], 500);
         }
@@ -702,7 +713,7 @@ class OcsApiController extends OCSController
         $qb = $this->db->getQueryBuilder();
         $qb->select('user_uid')->from('fc_book_members')
            ->where($qb->expr()->eq('book_id', $qb->createNamedParameter($bookId)));
-        $rows = $qb->execute()->fetchAll();
+        $rows = $qb->executeQuery()->fetchAllAssociative();
         foreach ($rows as $r) {
             $uid = (string)($r['user_uid'] ?? '');
             if ($uid !== '') { $set[$uid] = true; }

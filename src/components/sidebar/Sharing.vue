@@ -55,6 +55,7 @@ export default {
         await Promise.all(ids.map(uid => apiFetch(`/books/${this.bookId}/invite`, { method: 'POST', body: { user: uid } })))
         this.selectedSharee = null
         await this.loadMembers()
+        this.$emit('members-changed')
         showSuccess('Einladung gesendet')
         this.$emit('invited')
       } catch (e) {
@@ -92,6 +93,7 @@ export default {
         const res = await apiFetch(`/books/${this.bookId}/members/${encodeURIComponent(m.user_uid)}`, { method: 'DELETE' })
         if (!res.ok) throw new Error('remove')
         await this.loadMembers()
+        this.$emit('members-changed')
         showSuccess('Benutzer entfernt')
       } catch (_) { showError('Entfernen fehlgeschlagen') }
     },

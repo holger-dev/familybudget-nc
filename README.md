@@ -36,7 +36,7 @@ Hinweis: Falls eure Nextcloud unter `/index.php` oder einem Webroot (z. B. `/nex
 
 ## Kompatibilität
 
-- Nextcloud: Versionen 27–32
+- Nextcloud: Versionen 32–33
 - PHP: ab 8.1
 
 ## Berechtigungen & Datenschutz

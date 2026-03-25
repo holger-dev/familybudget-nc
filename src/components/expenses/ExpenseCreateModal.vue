@@ -3,10 +3,22 @@
     <div class="modal-body">
       <h3>{{ title }}</h3>
       <form @submit.prevent="onSave">
-        <NcTextField v-model.number="amount" type="number" step="0.01" min="0" label="Betrag (EUR)" required />
+        <NcTextField
+          :value="amountInput"
+          type="text"
+          inputmode="decimal"
+          label="Betrag (EUR)"
+          required
+          @input="onAmountInput" />
         <NcTextField v-model="date" type="date" label="Datum" required />
         <NcTextField v-model="description" type="text" label="Beschreibung (optional)" />
-        <div class="payer">Zahler: <strong>{{ payerLabel }}</strong></div>
+        <NcSelect
+          v-model="selectedPayer"
+          input-label="Eingetragen für"
+          label="label"
+          :clearable="false"
+          :searchable="false"
+          :options="payerOptions" />
         <div class="actions">
           <NcButton type="secondary" @click.prevent="$emit('close')">Abbrechen</NcButton>
           <NcButton type="primary" native-type="submit" :disabled="!valid">Speichern</NcButton>
@@ -20,37 +32,71 @@
 import NcModal from '@nextcloud/vue/dist/Components/NcModal.js'
 import NcTextField from '@nextcloud/vue/dist/Components/NcTextField.js'
 import NcButton from '@nextcloud/vue/dist/Components/NcButton.js'
+import NcSelect from '@nextcloud/vue/dist/Components/NcSelect.js'
 
 export default {
   name: 'ExpenseCreateModal',
-  components: { NcModal, NcTextField, NcButton },
+  components: { NcModal, NcTextField, NcButton, NcSelect },
   props: {
     expense: { type: Object, default: null },
+    bookMembers: { type: Array, default: () => [] },
+    currentUserUid: { type: String, default: null },
   },
   data() {
     const today = new Date().toISOString().slice(0, 10)
     return {
-      amount: this.expense ? (this.expense.amount_cents / 100) : null,
+      amountInput: this.expense ? this.formatAmount(this.expense.amount_cents / 100) : '',
       date: this.expense ? (this.expense.occurred_at || '').slice(0,10) : today,
       description: this.expense ? (this.expense.description || '') : '',
+      selectedPayer: null,
     }
   },
   computed: {
     title() { return this.expense ? 'Ausgabe bearbeiten' : 'Neue Ausgabe' },
-    valid() { return this.amount && this.amount > 0 && !!this.date },
-    payerLabel() {
-      // Backend uses the authenticated user; display generic info
-      return 'Aktueller Benutzer'
+    amountValue() {
+      const normalized = this.amountInput.replace(',', '.')
+      const value = Number.parseFloat(normalized)
+      return Number.isFinite(value) ? value : 0
+    },
+    valid() { return this.amountValue > 0 && !!this.date && !!this.selectedPayer?.value },
+    payerOptions() {
+      return this.bookMembers.map(member => ({
+        value: member.user_uid,
+        label: member.display_name && member.display_name !== member.user_uid
+          ? `${member.display_name} (${member.user_uid})`
+          : member.user_uid,
+      }))
+    },
+  },
+  watch: {
+    payerOptions: {
+      immediate: true,
+      handler(options) {
+        if (!options.length) {
+          this.selectedPayer = null
+          return
+        }
+        const preferredUid = this.expense?.user_uid || this.currentUserUid
+        const preferred = options.find(option => option.value === preferredUid)
+        this.selectedPayer = preferred || options[0]
+      },
     },
   },
   methods: {
+    formatAmount(value) {
+      return Number.isFinite(value) ? value.toFixed(2).replace('.', ',') : ''
+    },
+    onAmountInput(value) {
+      this.amountInput = String(value || '').replace(/\./g, ',')
+    },
     onSave() {
       if (!this.valid) return
       const payload = {
-        amount: this.amount,
+        amount: this.amountValue,
         date: this.date,
         description: this.description,
         currency: 'EUR',
+        user_uid: this.selectedPayer.value,
       }
       if (this.expense) payload.id = this.expense.id
       this.$emit('save', payload)
@@ -62,6 +108,5 @@ export default {
 <style>
 .modal-body { display: grid; gap: 12px; padding: 8px; }
 .modal-body form { display: grid; gap: 12px; }
-.payer { color: #374151; }
 .actions { display: flex; gap: 8px; justify-content: flex-end; }
 </style>

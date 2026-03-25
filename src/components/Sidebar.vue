@@ -5,7 +5,7 @@
     </NcAppSidebarTab>
     <NcAppSidebarTab id="sharing" name="Teilen">
       <div class="pad">
-        <Sharing :book-id="bookId" @invited="$emit('close')" />
+        <Sharing :book-id="bookId" @invited="$emit('close')" @members-changed="$emit('members-changed')" />
       </div>
     </NcAppSidebarTab>
     <NcAppSidebarTab id="importexport" name="Import/Export">
