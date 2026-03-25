@@ -2,7 +2,7 @@
 
 Diese Dokumentation ist für die Implementierung der Flutter‑App ausgelegt. Sie beschreibt alle relevanten OCS‑Endpunkte inklusive Request/Response‑Schemas und einen kompakten Flutter/Dart‑Beispielservice.
 
-Version: 0.3.0
+Version: 0.4.1
 
 ## Überblick
 
@@ -71,9 +71,101 @@ Expenses
     - Alternativ Zeitraum: `?from=YYYY-MM[&to=YYYY-MM]` (inkl. `from` bis exkl. Monat nach `to`)
   - Filter wirkt als OR über Monatsbereiche (jeweils von Monatsbeginn inkl. bis Folgemonatsbeginn exkl.).
   - Priorität: Wenn `from`/`to` gesetzt ist, wird die Monatsliste ignoriert.
-- POST `/books/{id}/expenses` Body `{ amount: number, description?: string, date: "YYYY-MM-DD", currency?: string }` → `201 { id: number }`
-- PATCH `/books/{id}/expenses/{eid}` Body beliebiges Teilset `{ amount?, description?, date?, currency? }` → `{ ok: true }`
+- POST `/books/{id}/expenses` Body `{ amount: number, description?: string, date: "YYYY-MM-DD", currency?: string, user_uid?: string }` → `201 { id: number }`
+  - Wenn `user_uid` gesetzt ist, muss der Nutzer Mitglied des Buchs sein; der Server speichert genau diesen Nutzer.
+  - Wenn `user_uid` fehlt, verwendet der Server den aktuell authentifizierten Nextcloud-Nutzer.
+- PATCH `/books/{id}/expenses/{eid}` Body beliebiges Teilset `{ amount?, description?, date?, currency?, user_uid? }` → `{ ok: true }`
+  - Wenn `user_uid` gesetzt ist, muss der Nutzer Mitglied des Buchs sein; der Server schreibt genau diesen Nutzer in die Expense.
+  - Wenn `user_uid` fehlt, bleibt die bestehende Zuordnung unverändert. Das vermeidet Breaking Changes für bestehende Clients.
 - DELETE `/books/{id}/expenses/{eid}` → `{ ok: true }`
+
+Beispiele
+
+Create mit explizitem Zielnutzer
+```http
+POST /ocs/v2.php/apps/familybudget/books/42/expenses
+OCS-APIRequest: true
+Content-Type: application/json
+
+{
+  "amount": 12.34,
+  "date": "2026-03-20",
+  "description": "Baeckerei",
+  "currency": "EUR",
+  "user_uid": "anna"
+}
+```
+
+```json
+{ "id": 501 }
+```
+
+Create ohne `user_uid`-Angabe
+```http
+POST /ocs/v2.php/apps/familybudget/books/42/expenses
+OCS-APIRequest: true
+Content-Type: application/json
+
+{
+  "amount": 8.90,
+  "date": "2026-03-21",
+  "description": "Kaffee",
+  "currency": "EUR"
+}
+```
+
+```json
+{ "id": 502 }
+```
+
+Update mit explizitem Zielnutzer
+```http
+PATCH /ocs/v2.php/apps/familybudget/books/42/expenses/501
+OCS-APIRequest: true
+Content-Type: application/json
+
+{
+  "amount": 13.20,
+  "user_uid": "ben"
+}
+```
+
+```json
+{ "ok": true }
+```
+
+List-Response mit `user_uid` als Server-Source-of-Truth
+```http
+GET /ocs/v2.php/apps/familybudget/books/42/expenses
+OCS-APIRequest: true
+```
+
+```json
+{
+  "expenses": [
+    {
+      "id": 501,
+      "book_id": 42,
+      "user_uid": "ben",
+      "amount_cents": 1320,
+      "currency": "EUR",
+      "description": "Baeckerei",
+      "occurred_at": "2026-03-20 00:00:00",
+      "created_at": "2026-03-20 09:15:00"
+    },
+    {
+      "id": 502,
+      "book_id": 42,
+      "user_uid": "current-user",
+      "amount_cents": 890,
+      "currency": "EUR",
+      "description": "Kaffee",
+      "occurred_at": "2026-03-21 00:00:00",
+      "created_at": "2026-03-21 08:05:11"
+    }
+  ]
+}
+```
 
 Import/Export
 - GET `/books/{id}/export.csv` → CSV-Download des gesamten Buchs
@@ -181,12 +273,14 @@ class NcApiService {
     required String date, // YYYY-MM-DD
     String? description,
     String currency = 'EUR',
+    String? userUid,
   }) async {
     final res = await _dio.post('/books/$bookId/expenses', data: {
       'amount': amount,
       'date': date,
       'description': description,
       'currency': currency,
+      if (userUid != null) 'user_uid': userUid,
     });
     return (res.data['id'] as num).toInt();
   }
@@ -198,12 +292,14 @@ class NcApiService {
     String? date, // YYYY-MM-DD
     String? description,
     String? currency,
+    String? userUid,
   }) async {
     final body = <String, dynamic>{};
     if (amount != null) body['amount'] = amount;
     if (date != null) body['date'] = date;
     if (description != null) body['description'] = description;
     if (currency != null) body['currency'] = currency;
+    if (userUid != null) body['user_uid'] = userUid;
     await _dio.patch('/books/$bookId/expenses/$expenseId', data: body);
   }
 
@@ -241,3 +337,7 @@ php scripts/ocs_smoke.php https://<cloud>/ocs/v2.php/apps/familybudget USER APP-
 - Es gibt kein `/api/v1`. Mobile Clients müssen die OCS‑Basis verwenden.
 - App‑Routen bleiben für die Web‑Oberfläche; nur GETs sind dort CSRF‑frei.
 - Für alle Schreiboperationen extern: OCS‑Pfad + `OCS-APIRequest: true`.
+- Keine Datenbankmigration erforderlich: `fc_expenses.user_uid` existiert bereits.
+- Bestehende Clients bleiben kompatibel:
+  - Create ohne `user_uid` bleibt erlaubt und verwendet weiterhin den aktuellen Nutzer.
+  - Update ohne `user_uid` ändert die bestehende Nutzerzuordnung nicht.

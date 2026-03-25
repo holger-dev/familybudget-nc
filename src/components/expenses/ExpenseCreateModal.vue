@@ -9,16 +9,18 @@
           inputmode="decimal"
           label="Betrag (EUR)"
           required
-          @input="onAmountInput" />
+          @update:value="onAmountInput" />
         <NcTextField v-model="date" type="date" label="Datum" required />
         <NcTextField v-model="description" type="text" label="Beschreibung (optional)" />
         <NcSelect
-          v-model="selectedPayer"
+          :value="selectedPayerOption"
           input-label="Eingetragen für"
           label="label"
           :clearable="false"
           :searchable="false"
-          :options="payerOptions" />
+          :options="payerOptions"
+          :append-to-body="false"
+          @input="onPayerChange" />
         <div class="actions">
           <NcButton type="secondary" @click.prevent="$emit('close')">Abbrechen</NcButton>
           <NcButton type="primary" native-type="submit" :disabled="!valid">Speichern</NcButton>
@@ -48,7 +50,7 @@ export default {
       amountInput: this.expense ? this.formatAmount(this.expense.amount_cents / 100) : '',
       date: this.expense ? (this.expense.occurred_at || '').slice(0,10) : today,
       description: this.expense ? (this.expense.description || '') : '',
-      selectedPayer: null,
+      selectedPayerUid: null,
     }
   },
   computed: {
@@ -58,14 +60,17 @@ export default {
       const value = Number.parseFloat(normalized)
       return Number.isFinite(value) ? value : 0
     },
-    valid() { return this.amountValue > 0 && !!this.date && !!this.selectedPayer?.value },
+    valid() { return this.amountValue > 0 && !!this.date && !!this.selectedPayerUid },
     payerOptions() {
       return this.bookMembers.map(member => ({
-        value: member.user_uid,
+        id: member.user_uid,
         label: member.display_name && member.display_name !== member.user_uid
           ? `${member.display_name} (${member.user_uid})`
           : member.user_uid,
       }))
+    },
+    selectedPayerOption() {
+      return this.payerOptions.find(option => option.id === this.selectedPayerUid) || null
     },
   },
   watch: {
@@ -73,12 +78,12 @@ export default {
       immediate: true,
       handler(options) {
         if (!options.length) {
-          this.selectedPayer = null
+          this.selectedPayerUid = null
           return
         }
         const preferredUid = this.expense?.user_uid || this.currentUserUid
-        const preferred = options.find(option => option.value === preferredUid)
-        this.selectedPayer = preferred || options[0]
+        const preferred = options.find(option => option.id === preferredUid)
+        this.selectedPayerUid = (preferred || options[0]).id
       },
     },
   },
@@ -87,7 +92,13 @@ export default {
       return Number.isFinite(value) ? value.toFixed(2).replace('.', ',') : ''
     },
     onAmountInput(value) {
-      this.amountInput = String(value || '').replace(/\./g, ',')
+      const nextValue = value && typeof value === 'object' && 'target' in value
+        ? value.target?.value
+        : value
+      this.amountInput = String(nextValue || '').replace(/\./g, ',')
+    },
+    onPayerChange(option) {
+      this.selectedPayerUid = option?.id || null
     },
     onSave() {
       if (!this.valid) return
@@ -96,7 +107,7 @@ export default {
         date: this.date,
         description: this.description,
         currency: 'EUR',
-        user_uid: this.selectedPayer.value,
+        user_uid: this.selectedPayerUid,
       }
       if (this.expense) payload.id = this.expense.id
       this.$emit('save', payload)

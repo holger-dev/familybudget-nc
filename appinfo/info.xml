@@ -10,7 +10,7 @@
         Highlights: Multi-User, mehrere Bücher, Einladungen, Filter & Suche, CSV-Export/Import (OCS).
         Unterstützt Nextcloud 32–33, PHP ab 8.1.
     ]]></description>
-    <version>0.4.0</version>
+    <version>0.4.1</version>
     <licence>agpl</licence>
     <author>Familybudget Contributors</author>
     <namespace>FamilyBudget</namespace>
