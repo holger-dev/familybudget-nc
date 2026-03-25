@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace OCA\FamilyBudget\Controller;
 
 use OCP\AppFramework\Controller;
+use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Http\ContentSecurityPolicy;
 use OCP\IRequest;
@@ -21,6 +23,8 @@ class PageController extends Controller {
      * @NoAdminRequired
      * @NoCSRFRequired
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function index(): TemplateResponse
     {
         $response = new TemplateResponse('familybudget', 'main', []);

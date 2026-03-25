@@ -9,6 +9,8 @@ use OCA\FamilyBudget\Service\ExpensePayloadValidator;
 use OCA\FamilyBudget\Service\ExpenseService;
 use OCA\FamilyBudget\Service\ExpenseValidationException;
 use OCP\AppFramework\Controller;
+use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 use OCP\IUserSession;
@@ -37,6 +39,8 @@ class ExpenseController extends Controller
      * @NoCSRFRequired
      * @param int $id Book id
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function index(int $id): JSONResponse
     {
         $user = $this->userSession->getUser();
@@ -61,6 +65,7 @@ class ExpenseController extends Controller
      * @NoAdminRequired
      * @param int $id Book id
      */
+    #[NoAdminRequired]
     public function create(int $id): JSONResponse
     {
         $user = $this->userSession->getUser();
@@ -90,6 +95,7 @@ class ExpenseController extends Controller
     /**
      * @NoAdminRequired
      */
+    #[NoAdminRequired]
     public function delete(int $id, int $eid): JSONResponse
     {
         $user = $this->userSession->getUser();
@@ -119,6 +125,7 @@ class ExpenseController extends Controller
     /**
      * @NoAdminRequired
      */
+    #[NoAdminRequired]
     public function update(int $id, int $eid): JSONResponse
     {
         $user = $this->userSession->getUser();

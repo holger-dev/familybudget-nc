@@ -8,6 +8,8 @@ use OCA\FamilyBudget\Service\ExpenseMapper;
 use OCA\FamilyBudget\Service\ExpensePayloadValidator;
 use OCA\FamilyBudget\Service\ExpenseService;
 use OCA\FamilyBudget\Service\ExpenseValidationException;
+use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\OCSController;
 use OCP\IRequest;
@@ -36,6 +38,8 @@ class OcsApiController extends OCSController
     /**
      * @NoAdminRequired
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function books(): DataResponse
     {
         $user = $this->userSession->getUser();
@@ -70,6 +74,8 @@ class OcsApiController extends OCSController
     /**
      * @NoAdminRequired
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function booksCreate(): DataResponse
     {
         $user = $this->userSession->getUser();
@@ -131,6 +137,8 @@ class OcsApiController extends OCSController
     /**
      * @NoAdminRequired
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function booksRename(int $id): DataResponse
     {
         $user = $this->userSession->getUser();
@@ -166,6 +174,8 @@ class OcsApiController extends OCSController
     /**
      * @NoAdminRequired
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function booksInvite(int $id): DataResponse
     {
         $user = $this->userSession->getUser();
@@ -205,6 +215,8 @@ class OcsApiController extends OCSController
     /**
      * @NoAdminRequired
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function booksMembers(int $id): DataResponse
     {
         $user = $this->userSession->getUser();
@@ -247,6 +259,8 @@ class OcsApiController extends OCSController
     /**
      * @NoAdminRequired
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function booksRemoveMember(int $id, string $uid): DataResponse
     {
         $user = $this->userSession->getUser();
@@ -277,6 +291,8 @@ class OcsApiController extends OCSController
     /**
      * @NoAdminRequired
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function booksDelete(int $id): DataResponse
     {
         $user = $this->userSession->getUser();
@@ -312,6 +328,8 @@ class OcsApiController extends OCSController
     /**
      * @NoAdminRequired
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function expensesIndex(int $id): DataResponse
     {
         $user = $this->userSession->getUser();
@@ -335,6 +353,8 @@ class OcsApiController extends OCSController
     /**
      * @NoAdminRequired
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function expensesCreate(int $id): DataResponse
     {
         $user = $this->userSession->getUser();
@@ -359,6 +379,8 @@ class OcsApiController extends OCSController
     /**
      * @NoAdminRequired
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function expensesUpdate(int $id, int $eid): DataResponse
     {
         $user = $this->userSession->getUser();
@@ -398,6 +420,8 @@ class OcsApiController extends OCSController
     /**
      * @NoAdminRequired
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function expensesDelete(int $id, int $eid): DataResponse
     {
         $user = $this->userSession->getUser();
@@ -441,6 +465,8 @@ class OcsApiController extends OCSController
      * Columns: date,amount,currency,description,user_uid
      * @NoAdminRequired
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function booksExportCsv(int $id)
     {
         $user = $this->userSession->getUser();
@@ -486,6 +512,8 @@ class OcsApiController extends OCSController
      * Accepted input: raw text/csv in request body or multipart field "file".
      * @NoAdminRequired
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function booksImportCsv(int $id): DataResponse
     {
         $user = $this->userSession->getUser();

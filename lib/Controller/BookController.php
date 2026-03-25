@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace OCA\FamilyBudget\Controller;
 
 use OCP\AppFramework\Controller;
+use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 use OCP\IUserSession;
@@ -26,6 +28,8 @@ class BookController extends Controller
      * @NoAdminRequired
      * @NoCSRFRequired
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function index(): JSONResponse
     {
         $user = $this->userSession->getUser();
@@ -68,6 +72,7 @@ class BookController extends Controller
     /**
      * @NoAdminRequired
      */
+    #[NoAdminRequired]
     public function create(): JSONResponse
     {
         $user = $this->userSession->getUser();
@@ -141,6 +146,7 @@ class BookController extends Controller
      * @NoAdminRequired
      * @param int $id
      */
+    #[NoAdminRequired]
     public function rename(int $id): JSONResponse
     {
         $user = $this->userSession->getUser();
@@ -191,6 +197,7 @@ class BookController extends Controller
      * @NoAdminRequired
      * @param int $id
      */
+    #[NoAdminRequired]
     public function invite(int $id): JSONResponse
     {
         $user = $this->userSession->getUser();
@@ -241,6 +248,7 @@ class BookController extends Controller
      * @NoAdminRequired
      * @param int $id
      */
+    #[NoAdminRequired]
     public function members(int $id): JSONResponse
     {
         $user = $this->userSession->getUser();
@@ -293,6 +301,7 @@ class BookController extends Controller
     /**
      * @NoAdminRequired
      */
+    #[NoAdminRequired]
     public function delete(int $id): JSONResponse
     {
         $user = $this->userSession->getUser();
@@ -335,6 +344,7 @@ class BookController extends Controller
      * Remove a member from a book (owner only). Owner cannot be removed.
      * @NoAdminRequired
      */
+    #[NoAdminRequired]
     public function removeMember(int $id, string $uid): JSONResponse
     {
         $user = $this->userSession->getUser();
