@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\FamilyBudget\Controller;
 
+use OCA\FamilyBudget\Service\DbCompat;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
@@ -11,6 +12,7 @@ use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 use OCP\IUserSession;
 use OCP\IDBConnection;
+use Psr\Log\LoggerInterface;
 
 class BookController extends Controller
 {
@@ -43,27 +45,27 @@ class BookController extends Controller
                 ->from('fc_books', 'b')
                 ->innerJoin('b', 'fc_book_members', 'm', 'b.id = m.book_id')
                 ->where($qb->expr()->eq('m.user_uid', $qb->createNamedParameter($uid)));
-            $rows = $qb->executeQuery()->fetchAllAssociative();
+            $rows = DbCompat::fetchAllAssociative($qb->executeQuery());
             if (!is_array($rows) || count($rows) === 0) {
                 // Fallback: return books owned by user (in case membership insert failed earlier)
                 $qb2 = $this->db->getQueryBuilder();
                 $qb2->select('id', 'name', 'owner_uid')
                     ->from('fc_books')
                     ->where($qb2->expr()->eq('owner_uid', $qb2->createNamedParameter($uid)));
-                $owned = $qb2->executeQuery()->fetchAllAssociative();
+                $owned = DbCompat::fetchAllAssociative($qb2->executeQuery());
                 $owned = array_map(static function(array $r) { $r['role'] = 'owner'; return $r; }, $owned);
                 return new JSONResponse(['books' => $owned]);
             }
             return new JSONResponse(['books' => $rows]);
         } catch (\Throwable $e) {
             // On error, log and fallback to owned books
-            $logger = \OC::$server->getLogger();
+            $logger = \OC::$server->get(LoggerInterface::class);
             $logger->error('FamilyBudget books query failed: ' . $e->getMessage(), ['app' => 'familybudget']);
             $qb2 = $this->db->getQueryBuilder();
             $qb2->select('id', 'name', 'owner_uid')
                 ->from('fc_books')
                 ->where($qb2->expr()->eq('owner_uid', $qb2->createNamedParameter($uid)));
-            $owned = $qb2->executeQuery()->fetchAllAssociative();
+            $owned = DbCompat::fetchAllAssociative($qb2->executeQuery());
             $owned = array_map(static function(array $r) { $r['role'] = 'owner'; return $r; }, $owned);
             return new JSONResponse(['books' => $owned]);
         }
@@ -128,7 +130,7 @@ class BookController extends Controller
         } catch (\Throwable $e) {
             $this->db->rollBack();
             $detail = $e instanceof \RuntimeException ? $e->getMessage() : 'unexpected_error';
-            $logger = \OC::$server->getLogger();
+            $logger = \OC::$server->get(LoggerInterface::class);
             $logger->error('FamilyBudget book create failed: ' . $e->getMessage(), [
                 'app' => 'familybudget',
                 'user' => $uid,
@@ -272,7 +274,7 @@ class BookController extends Controller
             ->from('fc_book_members')
             ->where($qb->expr()->eq('book_id', $qb->createNamedParameter($id)))
             ->orderBy('created_at', 'ASC');
-        $rows = $qb->executeQuery()->fetchAllAssociative();
+        $rows = DbCompat::fetchAllAssociative($qb->executeQuery());
         if (!is_array($rows) || count($rows) === 0) {
             // Fallback for legacy books without membership rows: include owner as member
             $qbOwner = $this->db->getQueryBuilder();

@@ -95,7 +95,7 @@ class ExpenseService
             }
         }
 
-        $rows = $qb->executeQuery()->fetchAllAssociative();
+        $rows = DbCompat::fetchAllAssociative($qb->executeQuery());
         return $this->mapper->mapExpenseRows($rows);
     }
 

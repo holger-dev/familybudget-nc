@@ -1,0 +1,8 @@
+services:
+  nextcloud:
+    image: nextcloud:32-apache
+    ports:
+      - "8081:80"
+
+  cron:
+    image: nextcloud:32-apache

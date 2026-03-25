@@ -3,6 +3,8 @@
 ## 0.4.2 - 2026-03-25
 - Fixed controller access metadata by adding current Nextcloud PHP attributes for authenticated and OCS routes.
 - Restored mobile app login and API access on Nextcloud 32–33 installations affected by the 0.4.1 regression.
+- Fixed Nextcloud 32 compatibility in backend logging and database result handling for book and expense list endpoints.
+- Verified the OCS CRUD flow for books and expenses against local Nextcloud 32 and 33 Docker test instances.
 
 ## 0.4.0 - 2026-03-25
 - Added support for creating and editing expenses on behalf of users who are shared into the selected book.

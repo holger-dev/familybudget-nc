@@ -15,6 +15,7 @@ use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 use OCP\IUserSession;
 use OCP\IDBConnection;
+use Psr\Log\LoggerInterface;
 
 class ExpenseController extends Controller
 {
@@ -55,7 +56,7 @@ class ExpenseController extends Controller
             $rows = $this->expenseService->listExpenses($id, $this->request->getParams());
             return new JSONResponse(['expenses' => $rows]);
         } catch (\Throwable $e) {
-            $logger = \OC::$server->getLogger();
+            $logger = \OC::$server->get(LoggerInterface::class);
             $logger->error('FamilyBudget expenses query failed: ' . $e->getMessage(), ['app' => 'familybudget']);
             return new JSONResponse(['message' => 'Internal error'], 500);
         }
