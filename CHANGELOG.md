@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.3 - 2026-06-09
+- Fixed unreadable settlement ("who pays whom") chips in light mode by using the dedicated readable text colors and a neutral chip background.
+- Highlighted the current user's share with readable main text instead of the theme primary color, and replaced a hard-coded gray with the themed variable.
+
 ## 0.4.2 - 2026-03-25
 - Fixed controller access metadata by adding current Nextcloud PHP attributes for authenticated and OCS routes.
 - Restored mobile app login and API access on Nextcloud 32–33 installations affected by the 0.4.1 regression.
