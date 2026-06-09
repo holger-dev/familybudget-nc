@@ -67,6 +67,22 @@ jobs:
           tag: ${{ github.ref }}
           overwrite: true
 
+      - name: Wait until the release asset is downloadable
+        run: |
+          url="${{ steps.attach_to_release.outputs.browser_download_url }}"
+          echo "Waiting for release asset to become available: $url"
+          for i in $(seq 1 30); do
+            code=$(curl -sSL -o /dev/null -w '%{http_code}' "$url")
+            echo "Attempt $i: HTTP $code"
+            if [ "$code" = "200" ]; then
+              echo "Asset is available."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::Release asset did not become downloadable in time: $url"
+          exit 1
+
       - name: Upload app to Nextcloud appstore
         uses: R0Wi/nextcloud-appstore-push-action@a011fe619bcf6e77ddebc96f9908e1af4071b9c1
         with:
