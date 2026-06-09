@@ -166,11 +166,11 @@ export default {
 .expense-months .summary { display: flex; gap: 12px; flex-wrap: wrap; color: var(--color-text-lighter); align-items: center; }
 .expense-months .summary .total { font-weight: 700; color: var(--color-main-text); font-size: 1.1rem; }
 .expense-months .summary .per-user { font-size: 12px; opacity: 0.9; }
-.expense-months .summary .per-user.me { font-weight: 700; color: var(--color-primary); }
-.expense-months .summary .settle { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 9999px; background: var(--color-primary-element-light); color: var(--color-main-text); border: 1px solid var(--color-primary-element); }
+.expense-months .summary .per-user.me { font-weight: 700; color: var(--color-main-text); text-decoration: underline; text-decoration-color: var(--color-primary-element); text-underline-offset: 3px; }
+.expense-months .summary .settle { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 9999px; background: var(--color-background-dark); color: var(--color-main-text); border: 1px solid var(--color-border); }
 .expense-months .summary .settle .amt { font-weight: 700; letter-spacing: .1px; }
-.expense-months .summary .settle.creditor { border-color: var(--color-success); color: var(--color-success); background: var(--color-background-hover); }
-.expense-months .summary .settle.debtor { border-color: var(--color-error); color: var(--color-error); background: var(--color-background-hover); }
+.expense-months .summary .settle.creditor { border-color: var(--color-success); color: var(--color-success-text); background: var(--color-background-dark); }
+.expense-months .summary .settle.debtor { border-color: var(--color-error); color: var(--color-error-text); background: var(--color-background-dark); }
 .expense-months .chev { margin-left: auto; display: flex; align-items: center; }
 .expense-months .expense-list { list-style: none; padding: 0; margin: 8px 0 0; width: 100%; }
 .expense-months .expense-list.cards { display: grid; gap: 8px; }
@@ -183,6 +183,6 @@ export default {
 .expense-months .amount-badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; background: var(--color-primary-element-light); color: var(--color-main-text); white-space: nowrap; }
 .expense-months .amount .icon-btn .button-vue { padding: 4px; }
 .expense-row .desc .name { font-weight: 500; }
-.expense-row .desc .by { color: #6b7280; font-size: 12px; }
+.expense-row .desc .by { color: var(--color-text-lighter); font-size: 12px; }
 .amount { text-align: right; font-variant-numeric: tabular-nums; }
 </style>
